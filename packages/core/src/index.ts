@@ -43,6 +43,7 @@ export type {
 
 // Rule store
 export type { DependencyGraph, RuleStore } from "./rules";
+export { RuleStoreImpl, DependencyGraphImpl } from "./rules";
 
 // Resolver
 export { Resolver, RequestContext } from "./resolver";

@@ -1,50 +1,64 @@
-/**
- * @file defaults/lint-rules.json
- *
- * @description
- * Default lint rule definitions for `hf lint`.
- *
- * The Analyzer reads this file at startup to determine which rules to enforce.
- * No lint rule is hardcoded in source — every rule exists here as data
- * (REQ-401, REQ-703). Project-level overrides in `.hyperfluxrc.json` can
- * change severity or disable rules without modifying this file.
- *
- * @schema
- * {
- *   "rules": Array<{
- *     "id":              string,               // Unique rule identifier
- *     "severity_default": "error"|"warn"|"off", // Severity when not overridden
- *     "scope":           "src"|"rules",         // What files this rule checks
- *     "description":     string,               // Human-readable description
- *     "patterns"?:       Array<{               // AST patterns (src-scope only)
- *       "match":   string,                     //   Named pattern kind
- *       "exclude"?: string[]                   //   Filename fragments to skip
- *     }>,
- *     "suggestion"?:     string,               // Suggested fix text
- *     "fixable"?:        boolean               // Whether FixEngine handles this
- *   }>
- * }
- *
- * @example
- * {
- *   "rules": [
- *     {
- *       "id": "no-hardcoded-copy",
- *       "severity_default": "error",
- *       "scope": "src",
- *       "description": "User-facing string literals should be in a copy rule.",
- *       "patterns": [{ "match": "string-literal-in-jsx-text", "exclude": ["test","story"] }],
- *       "suggestion": "Replace with useRule('copy.<domain>.<key>')",
- *       "fixable": true
- *     },
- *     {
- *       "id": "rules-no-cycles",
- *       "severity_default": "error",
- *       "scope": "rules",
- *       "description": "Rules must not have cyclic dependencies."
- *     }
- *   ]
- * }
- *
- * @since 0.1.0
- */
+{
+  "rules": [
+    {
+      "id": "no-hardcoded-copy",
+      "severity_default": "warn",
+      "scope": "src",
+      "description": "User-facing string literals in JSX should be externalized to copy rules.",
+      "patterns": [
+        { "match": "string-literal-in-jsx-text",      "exclude": ["test", "spec", "story", "stories", ".d.ts"] },
+        { "match": "string-literal-in-jsx-attribute",  "exclude": ["test", "spec", "story", "stories", ".d.ts"] }
+      ],
+      "suggestion": "Replace with: useRule('copy.<domain>.<key>')",
+      "fixable": true
+    },
+    {
+      "id": "no-magic-numbers",
+      "severity_default": "warn",
+      "scope": "src",
+      "description": "Numeric literals in conditional expressions should be config rules.",
+      "patterns": [
+        { "match": "number-literal-in-binary-comparison", "exclude": ["test", "spec", "story", "stories", ".d.ts"] }
+      ],
+      "suggestion": "Replace with: useRule('config.<domain>.<key>')",
+      "fixable": true
+    },
+    {
+      "id": "no-inline-config",
+      "severity_default": "warn",
+      "scope": "src",
+      "description": "Inline object literals as JSX props suggest configuration that should be a config rule.",
+      "patterns": [
+        { "match": "object-literal-as-jsx-prop", "exclude": ["test", "spec", "story", "stories", ".d.ts"] }
+      ],
+      "suggestion": "Replace with: useRule('config.<domain>.<key>')",
+      "fixable": false
+    },
+    {
+      "id": "rules-no-cycles",
+      "severity_default": "error",
+      "scope": "rules",
+      "description": "Rule dependency cycles are not allowed.",
+      "fixable": false
+    },
+    {
+      "id": "rules-no-orphans",
+      "severity_default": "warn",
+      "scope": "rules",
+      "description": "Rules that are never referenced by other rules may be dead code.",
+      "fixable": false
+    },
+    {
+      "id": "rules-domain-match",
+      "severity_default": "error",
+      "scope": "rules",
+      "description": "Every rule path must start with its domain name.",
+      "fixable": false
+    }
+  ],
+  "defaults": {
+    "src_globs": ["src/**/*.ts", "src/**/*.tsx"],
+    "rule_globs": ["rules/**/*.json"],
+    "ignore": []
+  }
+}

@@ -1,22 +1,10 @@
 /**
  * @file Lint analyzer — AST traversal and rule application engine.
- *
- * The `Analyzer` takes a set of source files (TypeScript text) and rule JSON
- * files (as `DomainFile` objects), applies all active `LintRuleDefinition`
- * entries, and produces a `LintResult`. The traversal uses the TypeScript
- * compiler API for `"src"`-scope rules and operates directly on `RuleStore`
- * data for `"rules"`-scope rules.
- *
- * The `Analyzer` contains no hardcoded rule logic. Every rule is defined in
- * `defaults/lint-rules.json` and executed by the generic pattern-matching
- * infrastructure here. Adding a lint rule means editing the JSON file, not
- * this class.
- *
  * @module @hyperflux/lint/analyzer
  * @since 0.1.0
  */
 
-import type { SourceFile } from "typescript";
+import * as ts from "typescript";
 import type { DomainFile } from "@hyperflux/core";
 import type { RuleStore } from "@hyperflux/core";
 import type {
@@ -31,192 +19,298 @@ import type {
 // AnalyzerOptions
 // ---------------------------------------------------------------------------
 
-/**
- * Configuration for constructing an {@link Analyzer}.
- *
- * @since 0.1.0
- * @public
- */
 export interface AnalyzerOptions {
-  /**
-   * Lint rule definitions loaded from `defaults/lint-rules.json`.
-   * The analyzer executes all rules whose `scope` and severity are active
-   * after applying `config.overrides`.
-   */
   lintRuleDefinitions: ReadonlyArray<LintRuleDefinition>;
-
-  /**
-   * Effective lint configuration after merging `defaults/lint-rules.json`
-   * defaults with the project's `.hyperfluxrc.json` overrides.
-   */
   config: LintConfig;
-
-  /**
-   * The loaded rule store, used for `"rules"`-scope lint rules such as
-   * `rules-no-cycles`, `rules-no-orphans`, and `rules-domain-match`.
-   */
   ruleStore: RuleStore;
 }
+
+// ---------------------------------------------------------------------------
+// Internal position helper
+// ---------------------------------------------------------------------------
+
+// Attributes that are never user-facing copy (skip for no-hardcoded-copy)
+const SKIP_ATTRS = new Set([
+  "classname", "class", "key", "href", "src", "alt", "id", "type", "role",
+  "for", "htmlfor", "tabindex", "target", "rel", "style", "ref", "name",
+  "value", "defaultvalue", "placeholder",
+]);
+
+function isSkipAttr(attrName: string): boolean {
+  const lower = attrName.toLowerCase();
+  return (
+    SKIP_ATTRS.has(lower) ||
+    lower.startsWith("aria-") ||
+    lower.startsWith("data-") ||
+    lower.startsWith("on")
+  );
+}
+
+// Comparison operator token kinds
+const COMPARISON_OPS = new Set([
+  ts.SyntaxKind.LessThanToken,
+  ts.SyntaxKind.GreaterThanToken,
+  ts.SyntaxKind.LessThanEqualsToken,
+  ts.SyntaxKind.GreaterThanEqualsToken,
+  ts.SyntaxKind.EqualsEqualsToken,
+  ts.SyntaxKind.EqualsEqualsEqualsToken,
+  ts.SyntaxKind.ExclamationEqualsToken,
+  ts.SyntaxKind.ExclamationEqualsEqualsToken,
+]);
+
+// Trivial numeric values not worth linting
+const TRIVIAL_NUMBERS = new Set(["0", "1", "2", "-1", "100"]);
 
 // ---------------------------------------------------------------------------
 // Analyzer
 // ---------------------------------------------------------------------------
 
-/**
- * Runs all active lint rules against source files and rule JSON files.
- *
- * For `"src"`-scope rules, the analyzer uses the TypeScript compiler to parse
- * each file into an AST and traverses it looking for the patterns declared in
- * each `LintRuleDefinition`. For `"rules"`-scope rules, it operates directly
- * on the `RuleStore`.
- *
- * The analyzer is pure in the sense that running it twice with identical inputs
- * produces identical outputs. It does not write to disk.
- *
- * @since 0.1.0
- * @public
- *
- * @example
- * ```ts
- * const analyzer = new Analyzer({
- *   lintRuleDefinitions,
- *   config,
- *   ruleStore,
- * });
- *
- * const sources = {
- *   "src/components/UserList.tsx": fs.readFileSync("src/components/UserList.tsx", "utf8"),
- * };
- * const result = await analyzer.analyze(sources, domainFiles);
- * console.log(`${result.errorCount} errors, ${result.warnCount} warnings`);
- * ```
- *
- * @see {@link AnalyzerOptions}
- * @see {@link LintResult}
- * @see {@link FixEngine}
- */
 export class Analyzer {
-  /**
-   * Constructs a new `Analyzer` with the given options.
-   *
-   * @param options - Analyzer configuration including rules, config, and store.
-   * @since 0.1.0
-   */
+  private readonly _rules: ReadonlyArray<LintRuleDefinition>;
+  private readonly _config: LintConfig;
+  private readonly _ruleStore: RuleStore;
+
   constructor(options: AnalyzerOptions) {
-    throw new Error("Not implemented");
+    this._rules = options.lintRuleDefinitions;
+    this._config = options.config;
+    this._ruleStore = options.ruleStore;
   }
 
-  /**
-   * Analyzes a single TypeScript/TSX source file for `"src"`-scope violations.
-   *
-   * Parses the source text into a TypeScript `SourceFile` AST and applies all
-   * active `"src"`-scope lint rules. Returns all diagnostics for that file.
-   *
-   * @param filePath - Absolute or CWD-relative path to the source file.
-   * @param source - Full source text of the file.
-   * @returns Promise resolving to all diagnostics found in this file.
-   * @since 0.1.0
-   * @public
-   *
-   * @example
-   * ```ts
-   * const diags = await analyzer.analyzeFile(
-   *   "src/pages/Pricing.tsx",
-   *   fs.readFileSync("src/pages/Pricing.tsx", "utf8"),
-   * );
-   * ```
-   */
-  async analyzeFile(
-    filePath: string,
-    source: string
-  ): Promise<LintDiagnostic[]> {
-    throw new Error("Not implemented");
+  effectiveSeverity(ruleId: string): LintSeverity | "off" {
+    const override = this._config.overrides[ruleId];
+    if (override !== undefined) return override as LintSeverity | "off";
+    const def = this._rules.find((r) => r.id === ruleId);
+    return def?.severity_default ?? "off";
   }
 
-  /**
-   * Applies all active `"rules"`-scope lint rules to the loaded domain files.
-   *
-   * Checks for cycles, orphan references, unused rules, and domain/path
-   * mismatches. Unlike `analyzeFile`, this method is synchronous because it
-   * operates on already-parsed, in-memory `DomainFile` objects.
-   *
-   * @param domainFiles - The parsed domain file records from the rule store.
-   * @returns Array of all rule-scope diagnostics found.
-   * @since 0.1.0
-   * @public
-   *
-   * @example
-   * ```ts
-   * const diags = analyzer.analyzeRules(ruleStore.domainFiles);
-   * ```
-   */
+  parseSourceFile(filePath: string, source: string): ts.SourceFile {
+    return ts.createSourceFile(
+      filePath,
+      source,
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TSX
+    );
+  }
+
+  async analyzeFile(filePath: string, source: string): Promise<LintDiagnostic[]> {
+    const diags: LintDiagnostic[] = [];
+    const sf = this.parseSourceFile(filePath, source);
+
+    for (const rule of this._rules) {
+      if (rule.scope !== "src") continue;
+      const severity = this.effectiveSeverity(rule.id);
+      if (severity === "off") continue;
+      if (!rule.patterns || rule.patterns.length === 0) continue;
+
+      for (const pattern of rule.patterns) {
+        const excluded = pattern.exclude?.some((ex) =>
+          filePath.toLowerCase().includes(ex.toLowerCase())
+        ) ?? false;
+        if (excluded) continue;
+
+        const nodes = this._findPatternMatches(pattern.match, sf);
+        for (const node of nodes) {
+          const pos = node.getStart(sf);
+          const lc = sf.getLineAndCharacterOfPosition(pos);
+          diags.push({
+            ruleId: rule.id,
+            severity: severity as LintSeverity,
+            file: filePath,
+            line: lc.line + 1,
+            column: lc.character + 1,
+            message: this._buildMessage(rule.id, node, sf),
+            suggestion: rule.suggestion,
+            fixable: rule.fixable ?? false,
+          });
+        }
+      }
+    }
+
+    return diags;
+  }
+
+  private _findPatternMatches(matchKind: string, sf: ts.SourceFile): ts.Node[] {
+    const results: ts.Node[] = [];
+
+    const visit = (node: ts.Node): void => {
+      switch (matchKind) {
+        case "string-literal-in-jsx-text":
+          if (ts.isJsxText(node) && !node.containsOnlyTriviaWhiteSpaces) {
+            const trimmed = node.text.trim();
+            if (trimmed.length > 0) results.push(node);
+          }
+          break;
+
+        case "string-literal-in-jsx-attribute":
+          if (ts.isJsxAttribute(node)) {
+            const init = node.initializer;
+            if (init && ts.isStringLiteral(init)) {
+              const attrName = node.name.getText(sf);
+              if (!isSkipAttr(attrName) && init.text.trim().length > 0) {
+                results.push(init);
+              }
+            }
+          }
+          break;
+
+        case "number-literal-in-binary-comparison":
+          if (ts.isNumericLiteral(node) && !TRIVIAL_NUMBERS.has(node.text)) {
+            const parent = node.parent;
+            if (parent && ts.isBinaryExpression(parent)) {
+              if (COMPARISON_OPS.has(parent.operatorToken.kind)) {
+                results.push(node);
+              }
+            }
+          }
+          break;
+
+        case "object-literal-as-jsx-prop":
+          if (ts.isJsxAttribute(node)) {
+            const init = node.initializer;
+            if (
+              init &&
+              ts.isJsxExpression(init) &&
+              init.expression &&
+              ts.isObjectLiteralExpression(init.expression)
+            ) {
+              results.push(init.expression);
+            }
+          }
+          break;
+      }
+      ts.forEachChild(node, visit);
+    };
+
+    ts.forEachChild(sf, visit);
+    return results;
+  }
+
+  private _buildMessage(ruleId: string, node: ts.Node, sf: ts.SourceFile): string {
+    if (ruleId === "no-hardcoded-copy") {
+      if (ts.isJsxText(node)) {
+        const t = node.text.trim().slice(0, 50);
+        return `Hard-coded JSX text "${t}" should be a copy rule.`;
+      }
+      if (ts.isStringLiteral(node)) {
+        return `Hard-coded string "${node.text.slice(0, 50)}" should be a copy rule.`;
+      }
+    }
+    if (ruleId === "no-magic-numbers") {
+      return `Magic number ${(node as ts.NumericLiteral).text} in comparison should be a config rule.`;
+    }
+    if (ruleId === "no-inline-config") {
+      return `Inline object literal as JSX prop should be a config rule.`;
+    }
+    const def = this._rules.find((r) => r.id === ruleId);
+    return def?.description ?? ruleId;
+  }
+
   analyzeRules(domainFiles: ReadonlyArray<DomainFile>): LintDiagnostic[] {
-    throw new Error("Not implemented");
+    const diags: LintDiagnostic[] = [];
+
+    for (const rule of this._rules) {
+      if (rule.scope !== "rules") continue;
+      const severity = this.effectiveSeverity(rule.id);
+      if (severity === "off") continue;
+
+      diags.push(...this._checkRulesScope(rule.id, severity as LintSeverity, domainFiles));
+    }
+
+    return diags;
   }
 
-  /**
-   * Runs the full lint pipeline: analyzes all source files and all rule files
-   * in parallel, then aggregates the results into a single `LintResult`.
-   *
-   * Source files are matched against `config.src_globs` and filtered by
-   * `config.ignore`. Rule files use `config.rule_globs` and the same ignore
-   * filter. Analysis is parallelized via `Promise.all`.
-   *
-   * @param sources - Record mapping file paths to their full source text. Only
-   *   files matching `config.src_globs` and not matching `config.ignore` are analyzed.
-   * @param domainFiles - The domain file records from the loaded rule store.
-   * @returns Promise resolving to the aggregated `LintResult`.
-   * @since 0.1.0
-   * @public
-   *
-   * @example
-   * ```ts
-   * const sources: Record<string, string> = {};
-   * for (const file of glob.sync("src/**\/*.{ts,tsx}")) {
-   *   sources[file] = fs.readFileSync(file, "utf8");
-   * }
-   * const result = await analyzer.analyze(sources, ruleStore.domainFiles);
-   * process.exit(result.errorCount > 0 ? 1 : 0);
-   * ```
-   *
-   * @see {@link LintResult}
-   */
+  private _checkRulesScope(
+    ruleId: string,
+    severity: LintSeverity,
+    domainFiles: ReadonlyArray<DomainFile>
+  ): LintDiagnostic[] {
+    const diags: LintDiagnostic[] = [];
+
+    if (ruleId === "rules-no-cycles") {
+      const graph = this._ruleStore.dependencyGraph;
+      const seen = new Set<string>();
+      for (const df of domainFiles) {
+        for (const rule of df.rules) {
+          if (seen.has(rule.path)) continue;
+          seen.add(rule.path);
+          if (graph.hasTransitiveDependency(rule.path, rule.path)) {
+            diags.push({
+              ruleId,
+              severity,
+              file: `rules/${df.domain}.json`,
+              line: 1,
+              column: 1,
+              message: `Rule "${rule.path}" is part of a dependency cycle.`,
+              fixable: false,
+            });
+          }
+        }
+      }
+    }
+
+    if (ruleId === "rules-no-orphans") {
+      const referenced = new Set<string>();
+      for (const df of domainFiles) {
+        for (const rule of df.rules) {
+          for (const req of rule.metadata.requires) {
+            referenced.add(req);
+          }
+        }
+      }
+      for (const df of domainFiles) {
+        for (const rule of df.rules) {
+          if (!referenced.has(rule.path)) {
+            diags.push({
+              ruleId,
+              severity,
+              file: `rules/${df.domain}.json`,
+              line: 1,
+              column: 1,
+              message: `Rule "${rule.path}" is never referenced by any other rule.`,
+              fixable: false,
+            });
+          }
+        }
+      }
+    }
+
+    if (ruleId === "rules-domain-match") {
+      for (const df of domainFiles) {
+        for (const rule of df.rules) {
+          if (!rule.path.startsWith(df.domain + ".")) {
+            diags.push({
+              ruleId,
+              severity,
+              file: `rules/${df.domain}.json`,
+              line: 1,
+              column: 1,
+              message: `Rule path "${rule.path}" does not start with domain "${df.domain}".`,
+              fixable: false,
+            });
+          }
+        }
+      }
+    }
+
+    return diags;
+  }
+
   async analyze(
     sources: Record<string, string>,
     domainFiles: ReadonlyArray<DomainFile>
   ): Promise<LintResult> {
-    throw new Error("Not implemented");
-  }
+    const srcResults = await Promise.all(
+      Object.entries(sources).map(([file, src]) => this.analyzeFile(file, src))
+    );
+    const ruleDiags = this.analyzeRules(domainFiles);
+    const all: LintDiagnostic[] = [...srcResults.flat(), ...ruleDiags];
 
-  /**
-   * Resolves the effective `LintSeverity` for a given rule ID after applying
-   * project-level overrides from `config.overrides`.
-   *
-   * Returns `"off"` if the rule is disabled by project config.
-   *
-   * @param ruleId - The lint rule ID to resolve severity for.
-   * @returns The effective severity for this rule in the current project.
-   * @since 0.1.0
-   * @public
-   */
-  effectiveSeverity(ruleId: string): LintSeverity | "off" {
-    throw new Error("Not implemented");
-  }
-
-  /**
-   * Parses a TypeScript source text string into a `SourceFile` AST node using
-   * the TypeScript compiler API.
-   *
-   * This method is exposed for testing and for tools that need to pre-parse
-   * files before calling `analyzeFile`.
-   *
-   * @param filePath - The file path (used as the `fileName` in the TS compiler).
-   * @param source - The full source text to parse.
-   * @returns The parsed TypeScript `SourceFile`.
-   * @since 0.1.0
-   * @internal
-   */
-  parseSourceFile(filePath: string, source: string): SourceFile {
-    throw new Error("Not implemented");
+    return {
+      diagnostics: all,
+      errorCount: all.filter((d) => d.severity === "error").length,
+      warnCount: all.filter((d) => d.severity === "warn").length,
+      fixableCount: all.filter((d) => d.fixable).length,
+    };
   }
 }

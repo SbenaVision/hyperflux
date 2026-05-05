@@ -1,15 +1,5 @@
 /**
  * @file Fix engine — computes and applies automated lint fixes.
- *
- * The `FixEngine` takes the output of `Analyzer.analyze()` and produces
- * `LintFix` objects for every `fixable` diagnostic. Only unambiguous fixes
- * are produced; ambiguous cases surface a hint via the diagnostic's
- * `suggestion` field instead.
- *
- * Current fixable rules in v0.1:
- * - `no-hardcoded-copy` — extracts string literals to `copy.<domain>.<key>` rules.
- * - `no-magic-numbers` — extracts numeric literals to `config.<domain>.<key>` rules.
- *
  * @module @hyperflux/lint/fix-engine
  * @since 0.1.0
  */
@@ -17,178 +7,282 @@
 import type { LintDiagnostic, LintFix, LintResult } from "./types";
 import type { RuleStore } from "@hyperflux/core";
 
-// ---------------------------------------------------------------------------
-// FixEngineOptions
-// ---------------------------------------------------------------------------
-
-/**
- * Configuration for constructing a {@link FixEngine}.
- *
- * @since 0.1.0
- * @public
- */
 export interface FixEngineOptions {
-  /**
-   * The rule store used to check for path collisions when generating
-   * new rule paths for extracted constants. The engine will not produce
-   * a fix that would create a duplicate rule path.
-   */
   ruleStore: RuleStore;
 }
 
-// ---------------------------------------------------------------------------
-// FixPlan
-// ---------------------------------------------------------------------------
-
-/**
- * A structured description of what a fix will do, separate from the `apply`
- * function. Useful for displaying a preview of fixes before applying them.
- *
- * @since 0.1.0
- * @public
- */
 export interface FixPlan {
-  /** The diagnostic being fixed. */
   diagnostic: LintDiagnostic;
-
-  /** Human-readable summary of the change that will be made. */
   summary: string;
-
-  /**
-   * For `no-hardcoded-copy` and `no-magic-numbers` fixes: the new rule path
-   * that will be created in the domain file.
-   */
   newRulePath?: string;
-
-  /**
-   * For `no-hardcoded-copy` and `no-magic-numbers` fixes: the domain file
-   * (relative path) that the new rule will be added to.
-   */
   targetDomainFile?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function lineColToOffset(source: string, line: number, column: number): number {
+  let offset = 0;
+  let currentLine = 1;
+  for (let i = 0; i < source.length; i++) {
+    if (currentLine === line && (i - offset + 1) === column) return i;
+    if (source[i] === "\n") { currentLine++; offset = i + 1; }
+  }
+  return -1;
+}
+
+function slugify(text: string): string {
+  return text
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 40) || "value";
+}
+
+function domainFromPath(filePath: string): string {
+  // Infer domain from file path segments, e.g. src/components/pricing/X.tsx -> pricing
+  const parts = filePath.replace(/\\/g, "/").split("/");
+  // Walk from end looking for a known segment that's not a filename
+  for (let i = parts.length - 2; i >= 0; i--) {
+    const seg = parts[i];
+    if (seg && seg !== "src" && seg !== "components" && seg !== "pages" && /^[a-z][a-z0-9_]*$/.test(seg)) {
+      return seg;
+    }
+  }
+  return "app";
+}
+
+// Extract the literal text the fix is targeting from the source at a given line/col
+function extractLiteralAt(source: string, line: number, col: number): string | null {
+  const offset = lineColToOffset(source, line, col);
+  if (offset < 0) return null;
+
+  // JSX text: no quotes — read until '<' or '{'
+  if (source[offset] !== '"' && source[offset] !== "'") {
+    let end = offset;
+    while (end < source.length && source[end] !== "<" && source[end] !== "{") end++;
+    return source.slice(offset, end);
+  }
+
+  // Quoted string literal
+  const quote = source[offset];
+  let i = offset + 1;
+  let result = "";
+  while (i < source.length && source[i] !== quote) {
+    if (source[i] === "\\") { result += source[i + 1]; i += 2; }
+    else { result += source[i]; i++; }
+  }
+  return result;
 }
 
 // ---------------------------------------------------------------------------
 // FixEngine
 // ---------------------------------------------------------------------------
 
-/**
- * Computes automated fixes for fixable `LintDiagnostic` entries and applies
- * them to source text.
- *
- * The engine applies fixes atomically per file: all fixes for a single file
- * are applied together in a single pass, avoiding conflicting edit positions.
- * Fixes for different files are independent.
- *
- * When a fix requires creating a new rule (e.g., extracting a string literal),
- * the engine also returns a modified domain file source alongside the modified
- * TypeScript source.
- *
- * @since 0.1.0
- * @public
- *
- * @example
- * ```ts
- * const engine = new FixEngine({ ruleStore });
- * const fixes = engine.computeFixes(lintResult, sources);
- * const updated = engine.applyFixes(fixes, sources);
- * for (const [file, newSource] of Object.entries(updated)) {
- *   fs.writeFileSync(file, newSource);
- * }
- * ```
- *
- * @see {@link FixEngineOptions}
- * @see {@link LintFix}
- */
 export class FixEngine {
-  /**
-   * Constructs a new `FixEngine`.
-   *
-   * @param options - Engine configuration including the rule store.
-   * @since 0.1.0
-   */
+  private readonly _ruleStore: RuleStore;
+
   constructor(options: FixEngineOptions) {
-    throw new Error("Not implemented");
+    this._ruleStore = options.ruleStore;
   }
 
-  /**
-   * Computes `LintFix` objects for every `fixable` diagnostic in `result`.
-   *
-   * Diagnostics where `fixable === false` are skipped — the caller should
-   * surface their `suggestion` text to the user instead.
-   *
-   * @param result - The lint result from `Analyzer.analyze()`.
-   * @param sources - Record mapping file paths to their current source text.
-   * @returns An ordered array of fixes. The order matches the diagnostic order
-   *   in `result.diagnostics`.
-   * @since 0.1.0
-   * @public
-   *
-   * @example
-   * ```ts
-   * const fixes = engine.computeFixes(lintResult, sources);
-   * console.log(`${fixes.length} of ${lintResult.fixableCount} fixes available`);
-   * ```
-   */
-  computeFixes(
-    result: LintResult,
-    sources: Record<string, string>
-  ): ReadonlyArray<LintFix> {
-    throw new Error("Not implemented");
+  computeFixes(result: LintResult, sources: Record<string, string>): ReadonlyArray<LintFix> {
+    const fixes: LintFix[] = [];
+
+    for (const diag of result.diagnostics) {
+      if (!diag.fixable) continue;
+      const source = sources[diag.file];
+      if (!source) continue;
+
+      const fix = this._buildFix(diag, source);
+      if (fix) fixes.push(fix);
+    }
+
+    return fixes;
   }
 
-  /**
-   * Applies a set of fixes to the source map and returns the updated source map.
-   *
-   * Fixes for the same file are applied in document order (highest line number
-   * last) to preserve character offsets during sequential edits. The original
-   * `sources` map is not mutated; a new record is returned.
-   *
-   * @param fixes - The fixes to apply, as returned by `computeFixes`.
-   * @param sources - Record mapping file paths to their current source text.
-   * @returns A new record with the updated source text for all affected files.
-   *   Unaffected files are not included.
-   * @since 0.1.0
-   * @public
-   *
-   * @example
-   * ```ts
-   * const updated = engine.applyFixes(fixes, sources);
-   * for (const [path, newSrc] of Object.entries(updated)) {
-   *   await fs.writeFile(path, newSrc, "utf8");
-   * }
-   * ```
-   */
+  private _buildFix(diag: LintDiagnostic, source: string): LintFix | null {
+    const domain = domainFromPath(diag.file);
+
+    if (diag.ruleId === "no-hardcoded-copy") {
+      const offset = lineColToOffset(source, diag.line, diag.column);
+      if (offset < 0) return null;
+
+      const isJsxText = source[offset] !== '"' && source[offset] !== "'";
+
+      if (isJsxText) {
+        // JsxText node: find the text content
+        let end = offset;
+        while (end < source.length && source[end] !== "<" && source[end] !== "{") end++;
+        const rawText = source.slice(offset, end);
+        const trimmed = rawText.trim();
+        if (!trimmed) return null;
+
+        const key = slugify(trimmed);
+        const rulePath = `copy.${domain}.${key}`;
+        const replacement = `{useRule('${rulePath}')}`;
+
+        return {
+          diagnostic: diag,
+          apply: (src: string): string => {
+            const o = lineColToOffset(src, diag.line, diag.column);
+            if (o < 0) return src;
+            let e = o;
+            while (e < src.length && src[e] !== "<" && src[e] !== "{") e++;
+            // Preserve leading/trailing whitespace around the replacement
+            const before = src.slice(o, o + (src.slice(o).length - src.slice(o).trimStart().length));
+            const after = src.slice(e - (src.slice(0, e).length - src.slice(0, e).trimEnd().length), e);
+            return src.slice(0, o + before.length) + replacement + src.slice(e - after.length);
+          },
+        };
+      } else {
+        // String literal in attribute: replace `"text"` with `{useRule(...)}`
+        const quote = source[offset];
+        let end = offset + 1;
+        while (end < source.length && source[end] !== quote) {
+          if (source[end] === "\\") end += 2; else end++;
+        }
+        end++; // include closing quote
+        const rawLiteral = source.slice(offset, end);
+        const inner = rawLiteral.slice(1, -1);
+        const key = slugify(inner);
+        const rulePath = `copy.${domain}.${key}`;
+        const replacement = `{useRule('${rulePath}')}`;
+
+        return {
+          diagnostic: diag,
+          apply: (src: string): string => {
+            const o = lineColToOffset(src, diag.line, diag.column);
+            if (o < 0) return src;
+            const q = src[o];
+            let e = o + 1;
+            while (e < src.length && src[e] !== q) {
+              if (src[e] === "\\") e += 2; else e++;
+            }
+            e++;
+            return src.slice(0, o) + replacement + src.slice(e);
+          },
+        };
+      }
+    }
+
+    if (diag.ruleId === "no-magic-numbers") {
+      const offset = lineColToOffset(source, diag.line, diag.column);
+      if (offset < 0) return null;
+
+      // Read the numeric literal
+      let end = offset;
+      while (end < source.length && /[0-9.]/.test(source[end])) end++;
+      const numText = source.slice(offset, end);
+      const key = `threshold_${numText.replace(".", "_")}`;
+      const rulePath = `config.${domain}.${key}`;
+      const replacement = `useRule('${rulePath}')`;
+
+      return {
+        diagnostic: diag,
+        apply: (src: string): string => {
+          const o = lineColToOffset(src, diag.line, diag.column);
+          if (o < 0) return src;
+          let e = o;
+          while (e < src.length && /[0-9.]/.test(src[e])) e++;
+          return src.slice(0, o) + replacement + src.slice(e);
+        },
+      };
+    }
+
+    return null;
+  }
+
   applyFixes(
     fixes: ReadonlyArray<LintFix>,
     sources: Record<string, string>
   ): Record<string, string> {
-    throw new Error("Not implemented");
+    // Group fixes by file
+    const byFile = new Map<string, LintFix[]>();
+    for (const fix of fixes) {
+      const file = fix.diagnostic.file;
+      if (!byFile.has(file)) byFile.set(file, []);
+      byFile.get(file)!.push(fix);
+    }
+
+    const updated: Record<string, string> = {};
+
+    for (const [file, fileFixes] of byFile) {
+      const source = sources[file];
+      if (!source) continue;
+
+      // Sort by line desc, then column desc — apply last-in-document first
+      const sorted = [...fileFixes].sort((a, b) => {
+        const lineDiff = b.diagnostic.line - a.diagnostic.line;
+        return lineDiff !== 0 ? lineDiff : b.diagnostic.column - a.diagnostic.column;
+      });
+
+      let current = source;
+      for (const fix of sorted) {
+        current = fix.apply(current);
+      }
+      updated[file] = current;
+    }
+
+    return updated;
   }
 
-  /**
-   * Returns structured `FixPlan` descriptions for each fixable diagnostic
-   * without actually producing `apply` functions. Useful for `--dry-run`
-   * and preview display.
-   *
-   * @param result - The lint result to plan fixes for.
-   * @param sources - Record mapping file paths to their current source text.
-   * @returns Ordered array of fix plans corresponding to fixable diagnostics.
-   * @since 0.1.0
-   * @public
-   *
-   * @example
-   * ```ts
-   * const plans = engine.planFixes(result, sources);
-   * for (const plan of plans) {
-   *   console.log(plan.summary);
-   *   if (plan.newRulePath) console.log("  → creates rule:", plan.newRulePath);
-   * }
-   * ```
-   */
-  planFixes(
-    result: LintResult,
-    sources: Record<string, string>
-  ): ReadonlyArray<FixPlan> {
-    throw new Error("Not implemented");
+  planFixes(result: LintResult, sources: Record<string, string>): ReadonlyArray<FixPlan> {
+    const plans: FixPlan[] = [];
+
+    for (const diag of result.diagnostics) {
+      if (!diag.fixable) continue;
+      const source = sources[diag.file];
+      if (!source) continue;
+
+      const domain = domainFromPath(diag.file);
+
+      if (diag.ruleId === "no-hardcoded-copy") {
+        const offset = lineColToOffset(source, diag.line, diag.column);
+        if (offset < 0) continue;
+        const isJsxText = source[offset] !== '"' && source[offset] !== "'";
+        let inner = "";
+        if (isJsxText) {
+          let end = offset;
+          while (end < source.length && source[end] !== "<" && source[end] !== "{") end++;
+          inner = source.slice(offset, end).trim();
+        } else {
+          const q = source[offset];
+          let end = offset + 1;
+          while (end < source.length && source[end] !== q) {
+            if (source[end] === "\\") end += 2; else end++;
+          }
+          inner = source.slice(offset + 1, end);
+        }
+        const key = slugify(inner);
+        const rulePath = `copy.${domain}.${key}`;
+        plans.push({
+          diagnostic: diag,
+          summary: `Replace "${inner.slice(0, 30)}" with useRule('${rulePath}')`,
+          newRulePath: rulePath,
+          targetDomainFile: `rules/copy.json`,
+        });
+      }
+
+      if (diag.ruleId === "no-magic-numbers") {
+        const offset = lineColToOffset(source, diag.line, diag.column);
+        if (offset < 0) continue;
+        let end = offset;
+        while (end < source.length && /[0-9.]/.test(source[end])) end++;
+        const numText = source.slice(offset, end);
+        const key = `threshold_${numText.replace(".", "_")}`;
+        const rulePath = `config.${domain}.${key}`;
+        plans.push({
+          diagnostic: diag,
+          summary: `Replace ${numText} with useRule('${rulePath}')`,
+          newRulePath: rulePath,
+          targetDomainFile: `rules/config.json`,
+        });
+      }
+    }
+
+    return plans;
   }
 }

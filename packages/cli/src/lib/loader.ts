@@ -25,7 +25,11 @@ export async function makeOperatorRegistry(): Promise<OperatorRegistryImpl> {
   }
 }
 
-export async function makeResolver(rulesDir: string): Promise<Resolver> {
+export async function makeLoaderResult(rulesDir: string): Promise<{
+  resolver: Resolver;
+  ruleStore: import("@hyperflux/core").RuleStore;
+  domainFiles: ReadonlyArray<import("@hyperflux/core").DomainFile>;
+}> {
   const operatorRegistry = await makeOperatorRegistry();
   const functionRegistry = new FunctionRegistry();
   const loader = new RuleLoader({
@@ -34,6 +38,12 @@ export async function makeResolver(rulesDir: string): Promise<Resolver> {
     operatorRegistry,
     env: "production",
   });
-  const { ruleStore } = await loader.load();
-  return new Resolver({ ruleStore, functionRegistry, operatorRegistry });
+  const { ruleStore, domainFiles } = await loader.load();
+  const resolver = new Resolver({ ruleStore, functionRegistry, operatorRegistry });
+  return { resolver, ruleStore, domainFiles };
+}
+
+export async function makeResolver(rulesDir: string): Promise<Resolver> {
+  const { resolver } = await makeLoaderResult(rulesDir);
+  return resolver;
 }
