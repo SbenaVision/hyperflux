@@ -99,5 +99,64 @@ export interface NewResult {
 export const run: CommandRunner = async function runNew(
   ctx: CliContext
 ): Promise<number> {
-  throw new Error("Not implemented");
+  const { readFile, writeFile, access } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+
+  const domain = ctx.positional[0];
+  const name = ctx.positional[1];
+
+  if (!domain || !name) {
+    process.stderr.write("  error  usage: hf new <domain> <name>\n");
+    return 1;
+  }
+
+  if (!/^[a-z][a-z0-9_]*$/.test(domain)) {
+    process.stderr.write(`  error  domain must be lowercase snake_case, got: ${domain}\n`);
+    return 1;
+  }
+
+  const fullPath = `${domain}.${name}`;
+  const rulesDir = join(ctx.projectRoot, "rules");
+  const domainFilePath = join(rulesDir, `${domain}.json`);
+
+  // Try to read existing domain file; create new one if missing
+  let domainFile: { domain: string; version: string; rules: unknown[] };
+  let created = false;
+  try {
+    await access(domainFilePath);
+    domainFile = JSON.parse(await readFile(domainFilePath, "utf8"));
+  } catch {
+    domainFile = { domain, version: "1", rules: [] };
+    created = true;
+  }
+
+  // Check for duplicate path
+  const existing = domainFile.rules as Array<{ path: string }>;
+  if (existing.some((r) => r.path === fullPath)) {
+    process.stderr.write(`  error  rule '${fullPath}' already exists in ${domainFilePath}\n`);
+    return 1;
+  }
+
+  const stub = {
+    path: fullPath,
+    kind: "compute",
+    inputs: [],
+    output: { type: "any" },
+    cases: [{ then: { kind: "literal", value: null } }],
+    metadata: { version: "1", requires: [], domain, description: `TODO: describe ${fullPath}` },
+  };
+
+  domainFile.rules.push(stub);
+
+  try {
+    await writeFile(domainFilePath, JSON.stringify(domainFile, null, 2) + "\n");
+  } catch {
+    process.stderr.write(`  error  could not write to ${domainFilePath}\n`);
+    return 1;
+  }
+
+  const action = created ? "created" : "updated";
+  process.stdout.write(`\n  ✓  ${action} ${domainFilePath}\n`);
+  process.stdout.write(`     added rule: ${fullPath}\n\n`);
+  return 0;
 };

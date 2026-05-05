@@ -103,7 +103,8 @@ export interface LintCliResult {
  * @see {@link LintCliResult}
  */
 export const run: CommandRunner = async function runLint(
-  ctx: CliContext
+  _ctx: CliContext
 ): Promise<number> {
-  throw new Error("Not implemented");
+  process.stderr.write("\n  hf lint — not yet implemented (coming in next session)\n\n");
+  return 1;
 };

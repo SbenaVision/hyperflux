@@ -1,0 +1,28 @@
+{
+  "domain": "ui",
+  "version": "1",
+  "rules": [
+    {
+      "path": "ui.labels.submit",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "any"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": null
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "ui",
+        "description": "TODO: describe ui.labels.submit"
+      }
+    }
+  ]
+}

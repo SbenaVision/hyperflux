@@ -1,0 +1,20 @@
+{
+  "domain": "pricing",
+  "version": "1",
+  "rules": [
+    {
+      "path": "pricing.atm.fee",
+      "kind": "compute",
+      "inputs": [{ "name": "amount", "type": { "type": "number" } }],
+      "output": { "type": "number" },
+      "cases": [
+        {
+          "when": { "kind": "op", "op": ">", "args": [{ "kind": "input", "path": ["amount"] }, { "kind": "literal", "value": 1000 }] },
+          "then": { "kind": "literal", "value": 0 }
+        },
+        { "then": { "kind": "literal", "value": 2.5 } }
+      ],
+      "metadata": { "version": "1", "requires": [], "domain": "pricing" }
+    }
+  ]
+}

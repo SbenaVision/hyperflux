@@ -97,5 +97,94 @@ export interface InitResult {
 export const run: CommandRunner = async function runInit(
   ctx: CliContext
 ): Promise<number> {
-  throw new Error("Not implemented");
+  const { writeFile, mkdir, access } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+
+  const targetDir = ctx.positional[0] ?? ctx.projectRoot;
+  const domain = (ctx.options["domain"] as string | undefined) ?? "app";
+  const force = Boolean(ctx.options["force"]);
+  const written: string[] = [];
+  const skipped: string[] = [];
+
+  async function write(relPath: string, content: string) {
+    const fullPath = join(targetDir, relPath);
+    const dir = fullPath.substring(0, fullPath.lastIndexOf("/"));
+    await mkdir(dir, { recursive: true });
+    if (!force) {
+      try {
+        await access(fullPath);
+        skipped.push(fullPath);
+        return;
+      } catch { /* file doesn't exist, write it */ }
+    }
+    await writeFile(fullPath, content);
+    written.push(fullPath);
+  }
+
+  const starterRule = JSON.stringify({
+    domain,
+    version: "1",
+    rules: [
+      {
+        path: `${domain}.example`,
+        kind: "config",
+        inputs: [],
+        output: { type: "string" },
+        cases: [{ then: { kind: "literal", value: "Hello from HyperFlux" } }],
+        metadata: { version: "1", requires: [], domain, description: "Starter example rule" },
+      },
+    ],
+  }, null, 2) + "\n";
+
+  const rc = JSON.stringify({
+    "$schema": "https://hyperflux.dev/schema/hyperfluxrc.json",
+    lint: { src_globs: ["src/**/*.{ts,tsx}"], rule_globs: ["rules/**/*.json"], ignore: [], overrides: {} },
+  }, null, 2) + "\n";
+
+  const claudeMd = `# HyperFlux Project
+
+This project uses HyperFlux to manage behavioral decisions.
+
+## Rules
+- All business logic, config values, labels, and thresholds live in \`rules/<domain>.json\`
+- Never hardcode business decisions in components or handlers
+- Run \`hf validate\` to verify rules before committing
+- Run \`hf lint\` to catch any hardcoded values that should be rules
+
+## Rule format
+\`\`\`json
+{
+  "path": "domain.rule_name",
+  "kind": "compute",
+  "inputs": [{ "name": "amount", "type": { "type": "number" } }],
+  "output": { "type": "number" },
+  "cases": [
+    { "when": { "kind": "op", "op": ">", "args": [{ "kind": "input", "path": ["amount"] }, { "kind": "literal", "value": 1000 }] }, "then": { "kind": "literal", "value": 0 } },
+    { "then": { "kind": "literal", "value": 2.5 } }
+  ],
+  "metadata": { "version": "1", "requires": [], "domain": "domain" }
+}
+\`\`\`
+
+## React usage
+\`\`\`tsx
+const label = useRule<string>("ui.labels.submit", {});
+const fee = useRule<number>("pricing.atm.fee", { amount });
+\`\`\`
+`;
+
+  await write(`rules/${domain}.json`, starterRule);
+  await write(".hyperfluxrc.json", rc);
+  await write("CLAUDE.md", claudeMd);
+
+  if (written.length > 0) {
+    process.stdout.write("\n  HyperFlux project initialized\n\n");
+    for (const f of written) process.stdout.write(`  ✓  ${f}\n`);
+  }
+  if (skipped.length > 0) {
+    process.stdout.write("\n  skipped (already exist, use --force to overwrite):\n");
+    for (const f of skipped) process.stdout.write(`  –  ${f}\n`);
+  }
+  process.stdout.write("\n  Next: hf validate\n\n");
+  return 0;
 };

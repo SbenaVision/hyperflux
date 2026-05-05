@@ -1,59 +1,106 @@
-/**
- * @file defaults/cli-commands.json
- *
- * @description
- * Command structure for the `hf` CLI tool.
- *
- * The CLI entry point reads this file at startup to build the command registry,
- * option parser, and help text. Adding a new subcommand, alias, flag, or
- * default value requires editing this file only (REQ-605, REQ-701).
- *
- * @schema
- * {
- *   "commands": Array<{
- *     "name":        string,               // Primary command name
- *     "aliases"?:    string[],             // Short aliases
- *     "description": string,               // One-line description for `hf --help`
- *     "usage":       string,               // Full usage string for `hf <cmd> --help`
- *     "options":     Array<{              // Accepted flags
- *       "flag":        string,             //   Long flag, e.g. "--fix"
- *       "short"?:      string,             //   Short alias, e.g. "-f"
- *       "description": string,
- *       "type":        "boolean"|"string"|"number",
- *       "default"?:    boolean|string|number,
- *       "required"?:   boolean
- *     }>,
- *     "args"?:       Array<{              // Positional arguments
- *       "name":        string,
- *       "description": string,
- *       "required"?:   boolean
- *     }>
- *   }>
- * }
- *
- * @example
- * {
- *   "commands": [
- *     {
- *       "name": "validate",
- *       "description": "Validate all rule files. Exits 0 if valid.",
- *       "usage": "hf validate [options]",
- *       "options": [],
- *       "args": []
- *     },
- *     {
- *       "name": "lint",
- *       "aliases": ["check"],
- *       "description": "Run discipline enforcement analysis.",
- *       "usage": "hf lint [--fix] [--format text|json]",
- *       "options": [
- *         { "flag": "--fix", "short": "-f", "description": "Apply unambiguous fixes.", "type": "boolean", "default": false },
- *         { "flag": "--format", "description": "Output format.", "type": "string", "default": "text" }
- *       ],
- *       "args": []
- *     }
- *   ]
- * }
- *
- * @since 0.1.0
- */
+{
+  "commands": [
+    {
+      "name": "validate",
+      "aliases": ["check"],
+      "description": "Validate all rule files. Exits 0 if all rules are valid.",
+      "usage": "hf validate [--rules-dir <path>]",
+      "options": [
+        {
+          "flag": "--rules-dir",
+          "description": "Path to the rules directory (default: ./rules).",
+          "type": "string",
+          "default": "rules"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "lint",
+      "aliases": ["check-code"],
+      "description": "Run HyperFlux discipline enforcement against source and rule files.",
+      "usage": "hf lint [--fix] [--format text|json]",
+      "options": [
+        {
+          "flag": "--fix",
+          "short": "-f",
+          "description": "Apply unambiguous automated fixes.",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "flag": "--format",
+          "description": "Output format: text or json.",
+          "type": "string",
+          "default": "text"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "test",
+      "description": "Run snapshot tests for rules via Vitest.",
+      "usage": "hf test [--watch]",
+      "options": [
+        {
+          "flag": "--watch",
+          "short": "-w",
+          "description": "Watch rule files and re-run on change.",
+          "type": "boolean",
+          "default": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "trace",
+      "description": "Render a saved evaluation trace JSON file as a readable tree.",
+      "usage": "hf trace [file] [--verbose] [--slow <ms>] [--depth <n>]",
+      "options": [
+        {
+          "flag": "--verbose",
+          "short": "-v",
+          "description": "Show full inputs and outputs for each node.",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "flag": "--slow",
+          "description": "Highlight nodes slower than this threshold (ms).",
+          "type": "number",
+          "default": 0
+        },
+        {
+          "flag": "--depth",
+          "description": "Maximum tree depth to render.",
+          "type": "number",
+          "default": 0
+        }
+      ],
+      "args": [
+        {
+          "name": "file",
+          "description": "Path to a trace JSON file saved by RequestContext.",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "new",
+      "description": "Scaffold a new rule stub in the given domain.",
+      "usage": "hf new <domain> <name>",
+      "options": [],
+      "args": [
+        { "name": "domain", "description": "Domain name (e.g. pricing).", "required": true },
+        { "name": "name",   "description": "Rule name within the domain (e.g. atm.fee).", "required": true }
+      ]
+    },
+    {
+      "name": "init",
+      "description": "Scaffold a new HyperFlux project in the current directory.",
+      "usage": "hf init",
+      "options": [],
+      "args": []
+    }
+  ]
+}

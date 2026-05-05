@@ -91,22 +91,44 @@ export interface TraceCliOptions {
 export const run: CommandRunner = async function runTrace(
   ctx: CliContext
 ): Promise<number> {
-  throw new Error("Not implemented");
+  const file = ctx.positional[0];
+  if (!file) {
+    process.stderr.write("  error  hf trace requires a file argument\n");
+    process.stderr.write("  usage  hf trace <file> [--verbose] [--slow <ms>] [--depth <n>]\n");
+    return 1;
+  }
+
+  let json: string;
+  try {
+    const { readFile } = await import("node:fs/promises");
+    json = await readFile(file, "utf8");
+  } catch {
+    process.stderr.write(`  error  could not read file: ${file}\n`);
+    return 1;
+  }
+
+  try {
+    const { traceFromJSON, formatTrace } = await import("@hyperflux/core");
+    const tree = traceFromJSON(json);
+    const cliOpts: TraceCliOptions = {
+      file,
+      verbose: Boolean(ctx.options["verbose"]),
+      slow: ctx.options["slow"] ? Number(ctx.options["slow"]) : undefined,
+      depth: ctx.options["depth"] ? Number(ctx.options["depth"]) : undefined,
+    };
+    process.stdout.write(formatTrace(tree, buildFormatOptions(cliOpts)));
+    return 0;
+  } catch (err) {
+    process.stderr.write(`  error  invalid trace file: ${String(err)}\n`);
+    return 1;
+  }
 };
 
-/**
- * Builds a `TraceFormatOptions` object from the parsed `TraceCliOptions`.
- *
- * Exists as a separate function to allow unit testing of option mapping
- * without running the full CLI invocation.
- *
- * @param options - Parsed CLI options from `hf trace`.
- * @returns A `TraceFormatOptions` object suitable for `formatTrace()`.
- * @since 0.1.0
- * @public
- *
- * @see {@link TraceFormatOptions}
- */
 export function buildFormatOptions(options: TraceCliOptions): TraceFormatOptions {
-  throw new Error("Not implemented");
+  const fmt: TraceFormatOptions = {};
+  if (options.verbose) fmt.verbose = true;
+  if (options.slow && options.slow > 0) fmt.slowThresholdMs = options.slow;
+  if (options.depth && options.depth > 0) fmt.depth = options.depth;
+  if (options.grep) fmt.grep = options.grep;
+  return fmt;
 }

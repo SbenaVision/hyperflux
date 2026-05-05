@@ -65,5 +65,15 @@ export interface TestResult {
 export const run: CommandRunner = async function runTest(
   ctx: CliContext
 ): Promise<number> {
-  throw new Error("Not implemented");
+  const { spawn } = await import("node:child_process");
+  const watch = Boolean(ctx.options["watch"]);
+  const args = ["vitest", watch ? "watch" : "run", "tests/rules/"];
+  return new Promise((resolve) => {
+    const child = spawn("npx", args, {
+      cwd: ctx.projectRoot,
+      stdio: "inherit",
+      shell: true,
+    });
+    child.on("close", (code) => resolve((code ?? 1) === 0 ? 0 : 1));
+  });
 };
