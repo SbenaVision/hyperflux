@@ -1,0 +1,37 @@
+/**
+ * @file defaults/performance-budgets.json
+ *
+ * @description
+ * Performance budget thresholds read by CI and the benchmark runner.
+ *
+ * CI fails if any measured metric exceeds its budget. Adjusting a budget
+ * requires editing this file only — no source changes required (REQ-701).
+ *
+ * All time values are in milliseconds.
+ *
+ * @schema
+ * {
+ *   "budgets": {
+ *     "cached_evaluation_ms":    number,  // Max ms for a cache-hit evaluation (REQ-105, REQ-108)
+ *     "uncached_evaluation_ms":  number,  // Max ms for a cache-miss evaluation
+ *     "rule_store_load_ms":      number,  // Max ms to load 1,000 rules
+ *     "lint_run_ms":             number,  // Max ms for `hf lint` on 5,000-line codebase
+ *     "hot_reload_ms":           number,  // Max ms from file save to reload completing
+ *     "batch_cached_100ms":      number   // Max ms for 1,000 cached evaluations (REQ-108)
+ *   }
+ * }
+ *
+ * @example
+ * {
+ *   "budgets": {
+ *     "cached_evaluation_ms":   1,
+ *     "uncached_evaluation_ms": 5,
+ *     "rule_store_load_ms":     200,
+ *     "lint_run_ms":            2000,
+ *     "hot_reload_ms":          1000,
+ *     "batch_cached_100ms":     100
+ *   }
+ * }
+ *
+ * @since 0.1.0
+ */

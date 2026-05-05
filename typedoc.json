@@ -1,0 +1,36 @@
+{
+  "name": "HyperFlux v0.1 API",
+  "entryPoints": [
+    "packages/core/src/index.ts",
+    "packages/react/src/index.ts",
+    "packages/lint/src/index.ts",
+    "packages/cli/src/index.ts"
+  ],
+  "entryPointStrategy": "resolve",
+  "out": "docs/api",
+  "tsconfig": "tsconfig.json",
+  "readme": "README.md",
+  "includeVersion": true,
+  "categorizeByGroup": true,
+  "groupOrder": ["Classes", "Interfaces", "Type Aliases", "Variables", "Functions", "Enumerations"],
+  "navigationLinks": {
+    "Overview": "documents/overview.html",
+    "Spec": "documents/spec.html",
+    "Manifesto": "documents/manifesto.html",
+    "Decisions": "documents/decisions.html"
+  },
+  "projectDocuments": [
+    "docs/overview.md",
+    "docs/spec.md",
+    "docs/manifesto.md",
+    "docs/decisions.md"
+  ],
+  "customJs": "docs/nav-fix.js",
+  "plugin": [],
+  "blockTags": ["@file", "@param", "@returns", "@throws", "@example", "@see", "@since", "@public", "@internal", "@beta", "@deprecated", "@default", "@module", "@typeParam", "@defaultValue"],
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeExternals": false,
+  "excludeInternal": false,
+  "sort": ["source-order"]
+}

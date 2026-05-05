@@ -1,0 +1,9 @@
+{
+  "$schema": "https://hyperflux.dev/schema/hyperfluxrc.json",
+  "lint": {
+    "src_globs": ["packages/*/src/**/*.ts"],
+    "rule_globs": ["defaults/*.json"],
+    "ignore": [],
+    "overrides": {}
+  }
+}

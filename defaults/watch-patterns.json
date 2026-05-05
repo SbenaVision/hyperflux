@@ -1,0 +1,24 @@
+/**
+ * @file defaults/watch-patterns.json
+ *
+ * @description
+ * Default glob patterns used by the hot-reload file watcher in dev mode.
+ *
+ * `RuleLoader.watch()` reads these patterns unless `LoaderOptions.watchPatterns`
+ * overrides them. Changing which files trigger a reload requires editing this
+ * file only (REQ-501, REQ-701).
+ *
+ * @schema
+ * {
+ *   "include": string[],   // Glob patterns for files that trigger a reload
+ *   "ignore":  string[]    // Glob patterns for files to ignore
+ * }
+ *
+ * @example
+ * {
+ *   "include": ["rules/**\/*.json"],
+ *   "ignore":  ["**/node_modules/**", "**/.git/**"]
+ * }
+ *
+ * @since 0.1.0
+ */

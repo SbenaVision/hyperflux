@@ -1,0 +1,59 @@
+/**
+ * @file defaults/cli-commands.json
+ *
+ * @description
+ * Command structure for the `hf` CLI tool.
+ *
+ * The CLI entry point reads this file at startup to build the command registry,
+ * option parser, and help text. Adding a new subcommand, alias, flag, or
+ * default value requires editing this file only (REQ-605, REQ-701).
+ *
+ * @schema
+ * {
+ *   "commands": Array<{
+ *     "name":        string,               // Primary command name
+ *     "aliases"?:    string[],             // Short aliases
+ *     "description": string,               // One-line description for `hf --help`
+ *     "usage":       string,               // Full usage string for `hf <cmd> --help`
+ *     "options":     Array<{              // Accepted flags
+ *       "flag":        string,             //   Long flag, e.g. "--fix"
+ *       "short"?:      string,             //   Short alias, e.g. "-f"
+ *       "description": string,
+ *       "type":        "boolean"|"string"|"number",
+ *       "default"?:    boolean|string|number,
+ *       "required"?:   boolean
+ *     }>,
+ *     "args"?:       Array<{              // Positional arguments
+ *       "name":        string,
+ *       "description": string,
+ *       "required"?:   boolean
+ *     }>
+ *   }>
+ * }
+ *
+ * @example
+ * {
+ *   "commands": [
+ *     {
+ *       "name": "validate",
+ *       "description": "Validate all rule files. Exits 0 if valid.",
+ *       "usage": "hf validate [options]",
+ *       "options": [],
+ *       "args": []
+ *     },
+ *     {
+ *       "name": "lint",
+ *       "aliases": ["check"],
+ *       "description": "Run discipline enforcement analysis.",
+ *       "usage": "hf lint [--fix] [--format text|json]",
+ *       "options": [
+ *         { "flag": "--fix", "short": "-f", "description": "Apply unambiguous fixes.", "type": "boolean", "default": false },
+ *         { "flag": "--format", "description": "Output format.", "type": "string", "default": "text" }
+ *       ],
+ *       "args": []
+ *     }
+ *   ]
+ * }
+ *
+ * @since 0.1.0
+ */

@@ -1,0 +1,29 @@
+{
+  "name": "@hyperflux/cli",
+  "version": "0.1.0",
+  "description": "Command-line tool for HyperFlux — validate, test, lint, trace, new, init.",
+  "bin": {
+    "hf": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hyperflux/core": "workspace:*",
+    "@hyperflux/lint": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  }
+}

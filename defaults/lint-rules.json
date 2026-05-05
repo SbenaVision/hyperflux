@@ -1,0 +1,50 @@
+/**
+ * @file defaults/lint-rules.json
+ *
+ * @description
+ * Default lint rule definitions for `hf lint`.
+ *
+ * The Analyzer reads this file at startup to determine which rules to enforce.
+ * No lint rule is hardcoded in source — every rule exists here as data
+ * (REQ-401, REQ-703). Project-level overrides in `.hyperfluxrc.json` can
+ * change severity or disable rules without modifying this file.
+ *
+ * @schema
+ * {
+ *   "rules": Array<{
+ *     "id":              string,               // Unique rule identifier
+ *     "severity_default": "error"|"warn"|"off", // Severity when not overridden
+ *     "scope":           "src"|"rules",         // What files this rule checks
+ *     "description":     string,               // Human-readable description
+ *     "patterns"?:       Array<{               // AST patterns (src-scope only)
+ *       "match":   string,                     //   Named pattern kind
+ *       "exclude"?: string[]                   //   Filename fragments to skip
+ *     }>,
+ *     "suggestion"?:     string,               // Suggested fix text
+ *     "fixable"?:        boolean               // Whether FixEngine handles this
+ *   }>
+ * }
+ *
+ * @example
+ * {
+ *   "rules": [
+ *     {
+ *       "id": "no-hardcoded-copy",
+ *       "severity_default": "error",
+ *       "scope": "src",
+ *       "description": "User-facing string literals should be in a copy rule.",
+ *       "patterns": [{ "match": "string-literal-in-jsx-text", "exclude": ["test","story"] }],
+ *       "suggestion": "Replace with useRule('copy.<domain>.<key>')",
+ *       "fixable": true
+ *     },
+ *     {
+ *       "id": "rules-no-cycles",
+ *       "severity_default": "error",
+ *       "scope": "rules",
+ *       "description": "Rules must not have cyclic dependencies."
+ *     }
+ *   ]
+ * }
+ *
+ * @since 0.1.0
+ */

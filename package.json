@@ -1,0 +1,23 @@
+{
+  "name": "hyperflux",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A typed rule engine that lets Claude apply 80% of product changes by editing rule rows instead of code.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -b packages/core packages/react packages/lint packages/cli",
+    "test": "vitest run",
+    "lint:self": "node packages/cli/dist/index.js lint",
+    "docs": "typedoc"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "typedoc": "^0.28.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

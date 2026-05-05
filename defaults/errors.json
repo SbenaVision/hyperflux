@@ -1,0 +1,36 @@
+/**
+ * @file defaults/errors.json
+ *
+ * @description
+ * Error code → message template mappings for every HyperFlux runtime error.
+ *
+ * The resolver and loader read this file at startup to format error messages.
+ * No user-facing string is hardcoded in source (REQ-109, REQ-701, REQ-703).
+ *
+ * Message templates use `{placeholder}` tokens that are substituted at
+ * runtime with values from the error's structured context.
+ *
+ * @schema
+ * {
+ *   "errors": {
+ *     [errorKey: string]: {
+ *       "code":    string,   // HF-prefixed numeric code, e.g. "HF001"
+ *       "message": string    // Template with {token} placeholders
+ *     }
+ *   }
+ * }
+ *
+ * @example
+ * {
+ *   "errors": {
+ *     "RULE_NOT_FOUND":          { "code": "HF001", "message": "Rule '{path}' not found" },
+ *     "INPUT_TYPE_ERROR":        { "code": "HF002", "message": "Input '{name}' type mismatch in rule '{path}': expected {expected}, got {actual}" },
+ *     "OUTPUT_TYPE_ERROR":       { "code": "HF003", "message": "Case {caseIndex} output type mismatch in rule '{path}': expected {expected}, got {actual}" },
+ *     "NO_MATCHING_CASE":        { "code": "HF004", "message": "No matching case in rule '{path}' and no default present" },
+ *     "FUNCTION_NOT_REGISTERED": { "code": "HF005", "message": "Function '{name}' not registered (referenced in rule '{path}')" },
+ *     "RULE_CYCLE":              { "code": "HF006", "message": "Cyclic rule dependency detected: {cycle}" }
+ *   }
+ * }
+ *
+ * @since 0.1.0
+ */
