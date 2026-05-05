@@ -9,20 +9,24 @@
  * @since 0.1.0
  */
 
-// Schema and data model
+// Schema and data model — value exports (Zod schemas and runtime values)
 export {
   TypeSpec,
   Expression,
-  LiteralExpression,
-  InputExpression,
-  RuleExpression,
-  FnExpression,
-  OpExpression,
   Case,
   RuleInput,
   RuleMetadata,
   Rule,
   DomainFile,
+} from "./schema";
+
+// Schema and data model — type-only exports (interfaces with no runtime value)
+export type {
+  LiteralExpression,
+  InputExpression,
+  RuleExpression,
+  FnExpression,
+  OpExpression,
 } from "./schema";
 
 // Operator and function registries

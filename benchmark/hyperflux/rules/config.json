@@ -1,0 +1,16 @@
+{
+  "domain": "config",
+  "version": "1",
+  "rules": [
+    { "path": "config.dashboard.alert_min_count", "kind": "compute", "inputs": [], "output": {"type": "number"}, "cases": [{"then": {"kind": "literal", "value": 3}}], "metadata": {"version": "1", "requires": [], "domain": "config"} },
+    { "path": "config.dashboard.alert_refresh_ms", "kind": "compute", "inputs": [], "output": {"type": "number"}, "cases": [{"then": {"kind": "literal", "value": 30000}}], "metadata": {"version": "1", "requires": [], "domain": "config"} },
+    { "path": "config.users.high_value_threshold", "kind": "compute", "inputs": [], "output": {"type": "number"}, "cases": [{"then": {"kind": "literal", "value": 10000}}], "metadata": {"version": "1", "requires": [], "domain": "config"} },
+    { "path": "config.users.inactive_days_warning", "kind": "compute", "inputs": [], "output": {"type": "number"}, "cases": [{"then": {"kind": "literal", "value": 90}}], "metadata": {"version": "1", "requires": [], "domain": "config"} },
+    { "path": "config.users.default_sort", "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "last_active"}}], "metadata": {"version": "1", "requires": [], "domain": "config"} },
+    { "path": "config.app.date_format", "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "YYYY-MM-DD"}}], "metadata": {"version": "1", "requires": [], "domain": "config"} },
+    { "path": "config.app.maintenance_mode", "kind": "compute", "inputs": [], "output": {"type": "boolean"}, "cases": [{"then": {"kind": "literal", "value": false}}], "metadata": {"version": "1", "requires": [], "domain": "config"} },
+    { "path": "config.auth.min_password_length", "kind": "compute", "inputs": [], "output": {"type": "number"}, "cases": [{"then": {"kind": "literal", "value": 12}}], "metadata": {"version": "1", "requires": [], "domain": "config"} },
+    { "path": "config.notifications.weekly_summary_enabled", "kind": "compute", "inputs": [], "output": {"type": "boolean"}, "cases": [{"then": {"kind": "literal", "value": false}}], "metadata": {"version": "1", "requires": [], "domain": "config"} },
+    { "path": "config.notifications.email_disabled", "kind": "compute", "inputs": [], "output": {"type": "boolean"}, "cases": [{"then": {"kind": "literal", "value": false}}], "metadata": {"version": "1", "requires": [], "domain": "config"} }
+  ]
+}

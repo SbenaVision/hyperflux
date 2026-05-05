@@ -1,0 +1,10 @@
+{
+  "domain": "pricing",
+  "version": "1",
+  "rules": [
+    { "path": "pricing.vip.discount_rate", "kind": "compute", "inputs": [], "output": {"type": "number"}, "cases": [{"then": {"kind": "literal", "value": 0.05}}], "metadata": {"version": "1", "requires": [], "domain": "pricing"} },
+    { "path": "pricing.fee.flat_fee", "kind": "compute", "inputs": [], "output": {"type": "number"}, "cases": [{"then": {"kind": "literal", "value": 2.5}}], "metadata": {"version": "1", "requires": [], "domain": "pricing"} },
+    { "path": "pricing.fee.high_value_threshold", "kind": "compute", "inputs": [], "output": {"type": "number"}, "cases": [{"then": {"kind": "literal", "value": 1000}}], "metadata": {"version": "1", "requires": [], "domain": "pricing"} },
+    { "path": "pricing.fee.high_value_result", "kind": "compute", "inputs": [], "output": {"type": "number"}, "cases": [{"then": {"kind": "literal", "value": 0}}], "metadata": {"version": "1", "requires": [], "domain": "pricing"} }
+  ]
+}

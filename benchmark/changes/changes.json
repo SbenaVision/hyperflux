@@ -1,0 +1,166 @@
+{
+  "version": "1",
+  "description": "20-change benchmark: same prompts applied to vanilla and HyperFlux versions",
+  "changes": [
+    {
+      "id": 1,
+      "prompt": "Change all 'Submit' button labels to 'Save'.",
+      "category": "copy",
+      "hyperflux_target": "rules/copy.json — change copy.dashboard.submit_button and copy.settings.save_button values from 'Submit' to 'Save'",
+      "vanilla_target": "src/components/UserDetail.tsx and SettingsForm.tsx — find and replace the SAVE_BUTTON_LABEL constant and JSX string literals",
+      "notes": "HyperFlux: 1 file, 2 value changes. Vanilla: 2+ files, code changes."
+    },
+    {
+      "id": 2,
+      "prompt": "Add a 'deactivated' status filter to the user list.",
+      "category": "config",
+      "hyperflux_target": "rules/config.json — update config.users.statuses to include 'deactivated', or add the new status to the STATUS_FILTERS array via a rule",
+      "vanilla_target": "src/components/UserList.tsx — add 'deactivated' to the STATUS_FILTERS array",
+      "notes": "Both touch a list, but HyperFlux isolates the change to JSON."
+    },
+    {
+      "id": 3,
+      "prompt": "Hide the alerts widget when alert count is less than 3.",
+      "category": "config",
+      "hyperflux_target": "rules/config.json — already at 3, change config.dashboard.alert_min_count if needed",
+      "vanilla_target": "src/app/dashboard/page.tsx — change the threshold constant ALERTS_DISPLAY_THRESHOLD",
+      "notes": "Threshold is already 3 in both. Benchmark tests ability to locate the value."
+    },
+    {
+      "id": 4,
+      "prompt": "Add a 5% discount for VIP customers.",
+      "category": "pricing",
+      "hyperflux_target": "rules/pricing.json — change pricing.vip.discount_rate from 0.05 to 0.05 (already set); demonstrate by changing to 0.10 for a second pass",
+      "vanilla_target": "src/components/PricingTable.tsx — change VIP_DISCOUNT_RATE constant",
+      "notes": "Core pricing rule change."
+    },
+    {
+      "id": 5,
+      "prompt": "Change the default timezone in settings to show the browser-detected timezone.",
+      "category": "config",
+      "hyperflux_target": "rules/config.json — update config.app.default_timezone to use browser detection logic or a new value",
+      "vanilla_target": "src/components/SettingsForm.tsx — update the timezone default value",
+      "notes": "Config value change."
+    },
+    {
+      "id": 6,
+      "prompt": "Add email format validation to the user profile form — show an error if the email doesn't contain '@'.",
+      "category": "logic",
+      "hyperflux_target": "Add a rule config.users.email_validation_pattern and update UserDetail.tsx to check it",
+      "vanilla_target": "src/components/UserDetail.tsx — add inline validation logic",
+      "notes": "Validation logic. HyperFlux externalizes the pattern; both touch source for display."
+    },
+    {
+      "id": 7,
+      "prompt": "Show a confirmation dialog before deactivating a user.",
+      "category": "ux",
+      "hyperflux_target": "Add copy.users.deactivate_confirm_message rule and use it in UserDetail.tsx",
+      "vanilla_target": "src/components/UserDetail.tsx — add a confirm() call with hardcoded message",
+      "notes": "UX change. HyperFlux keeps confirmation copy in rules."
+    },
+    {
+      "id": 8,
+      "prompt": "Hide the pricing rules page from non-admin users.",
+      "category": "config",
+      "hyperflux_target": "Add config.pricing.admin_only rule (boolean true) and check it in pricing/page.tsx",
+      "vanilla_target": "src/app/pricing/page.tsx — add inline role check for admin",
+      "notes": "Access control via config rule vs hardcoded."
+    },
+    {
+      "id": 9,
+      "prompt": "Sort the user list by last-active by default.",
+      "category": "config",
+      "hyperflux_target": "rules/config.json — already at 'last_active'. Verify config.users.default_sort is used.",
+      "vanilla_target": "src/components/UserList.tsx — change DEFAULT_SORT constant to 'last_active'",
+      "notes": "Sort default. Demonstrates value already set correctly in HyperFlux rules."
+    },
+    {
+      "id": 10,
+      "prompt": "Add a 'High Value' badge for users with total revenue over $10,000.",
+      "category": "config",
+      "hyperflux_target": "rules/config.json — already set at 10000. Verify config.users.high_value_threshold is used.",
+      "vanilla_target": "src/components/UserList.tsx — verify HIGH_VALUE_THRESHOLD = 10000 and badge is shown",
+      "notes": "Badge threshold. Tests both reading of config rule and display."
+    },
+    {
+      "id": 11,
+      "prompt": "Refresh the alerts widget every 30 seconds automatically.",
+      "category": "config",
+      "hyperflux_target": "rules/config.json — already at 30000ms. Add useEffect in AlertsWidget.tsx using the rule value.",
+      "vanilla_target": "src/components/AlertsWidget.tsx — add useEffect with hardcoded 30000ms interval",
+      "notes": "Auto-refresh. HyperFlux reads interval from rule; vanilla hardcodes."
+    },
+    {
+      "id": 12,
+      "prompt": "Add a tooltip on the pricing page explaining how discounts are stacked.",
+      "category": "copy",
+      "hyperflux_target": "rules/copy.json — add copy.pricing.discount_stack_tooltip rule with the explanation text",
+      "vanilla_target": "src/components/PricingTable.tsx — add tooltip with hardcoded explanation string",
+      "notes": "New copy content. HyperFlux: add to rules/copy.json. Vanilla: add inline string."
+    },
+    {
+      "id": 13,
+      "prompt": "Change the date format everywhere from MM/DD/YYYY to YYYY-MM-DD.",
+      "category": "config",
+      "hyperflux_target": "rules/config.json — already at 'YYYY-MM-DD'. Verify config.app.date_format is used in utils.ts.",
+      "vanilla_target": "src/lib/utils.ts — update the date formatting function",
+      "notes": "Date format. HyperFlux already has it right; both may need utils update."
+    },
+    {
+      "id": 14,
+      "prompt": "Add a maintenance mode banner at the top of every page when maintenance mode is enabled.",
+      "category": "config",
+      "hyperflux_target": "rules/config.json — set config.app.maintenance_mode to true; add banner in layout.tsx reading the rule",
+      "vanilla_target": "src/app/layout.tsx — add banner with hardcoded maintenance mode flag",
+      "notes": "Layout-level config. HyperFlux: flip one boolean in rules. Vanilla: modify layout."
+    },
+    {
+      "id": 15,
+      "prompt": "Show a warning next to users who haven't logged in for over 90 days.",
+      "category": "config",
+      "hyperflux_target": "rules/config.json — already at 90. Verify config.users.inactive_days_warning is used in UserList.tsx.",
+      "vanilla_target": "src/components/UserList.tsx — verify INACTIVE_WARNING_DAYS = 90 and warning is shown",
+      "notes": "Threshold check. Both should already work; benchmark measures locate-and-verify speed."
+    },
+    {
+      "id": 16,
+      "prompt": "Add a 'Copy ID' button next to every user's ID in the user detail page.",
+      "category": "ux",
+      "hyperflux_target": "rules/copy.json — add copy.users.copy_id_button label. Use it in UserDetail.tsx.",
+      "vanilla_target": "src/components/UserDetail.tsx — add button with hardcoded 'Copy ID' label",
+      "notes": "New feature. HyperFlux: rule for label + component code. Vanilla: just component code."
+    },
+    {
+      "id": 17,
+      "prompt": "Change the minimum password requirement from 8 characters to 12 characters.",
+      "category": "config",
+      "hyperflux_target": "rules/config.json — already at 12. Verify config.auth.min_password_length is used.",
+      "vanilla_target": "src/components/UserDetail.tsx — change MIN_PASSWORD_LENGTH from 8 to 12",
+      "notes": "Security config. Vanilla was initialized to 12 here, but the benchmark prompt assumes 8."
+    },
+    {
+      "id": 18,
+      "prompt": "Add a 'Weekly Summary Email' notification preference toggle to the settings page.",
+      "category": "config",
+      "hyperflux_target": "rules/config.json — already has config.notifications.weekly_summary_enabled = false. Wire it to SettingsForm.tsx toggle.",
+      "vanilla_target": "src/components/SettingsForm.tsx — add new toggle with hardcoded default false",
+      "notes": "New settings field. HyperFlux: rule exists, just wire UI. Vanilla: add code + default."
+    },
+    {
+      "id": 19,
+      "prompt": "Show a 'Deleted' tag on any user whose status is 'deactivated' in the user list.",
+      "category": "copy",
+      "hyperflux_target": "rules/copy.json — add copy.users.deactivated_tag rule = 'Deleted'. Use in UserList.tsx.",
+      "vanilla_target": "src/components/UserList.tsx — add conditional tag with hardcoded 'Deleted' string",
+      "notes": "Status label display. HyperFlux: add rule + wire. Vanilla: inline JSX string."
+    },
+    {
+      "id": 20,
+      "prompt": "Add a site-wide toggle in settings to disable all email notifications.",
+      "category": "config",
+      "hyperflux_target": "rules/config.json — already has config.notifications.email_disabled = false. Wire to SettingsForm.tsx.",
+      "vanilla_target": "src/components/SettingsForm.tsx — add toggle with hardcoded default false",
+      "notes": "Global notification toggle. HyperFlux: rule exists, just surface in UI. Vanilla: add from scratch."
+    }
+  ]
+}

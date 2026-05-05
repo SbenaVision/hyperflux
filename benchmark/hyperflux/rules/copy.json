@@ -1,0 +1,14 @@
+{
+  "domain": "copy",
+  "version": "1",
+  "rules": [
+    { "path": "copy.dashboard.page_title", "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Dashboard"}}], "metadata": {"version": "1", "requires": [], "domain": "copy"} },
+    { "path": "copy.dashboard.submit_button", "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Submit"}}], "metadata": {"version": "1", "requires": [], "domain": "copy"} },
+    { "path": "copy.users.page_title", "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Users"}}], "metadata": {"version": "1", "requires": [], "domain": "copy"} },
+    { "path": "copy.users.high_value_badge", "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "High Value"}}], "metadata": {"version": "1", "requires": [], "domain": "copy"} },
+    { "path": "copy.users.inactive_warning", "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Inactive for over 90 days"}}], "metadata": {"version": "1", "requires": [], "domain": "copy"} },
+    { "path": "copy.settings.page_title", "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Settings"}}], "metadata": {"version": "1", "requires": [], "domain": "copy"} },
+    { "path": "copy.settings.save_button", "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Submit"}}], "metadata": {"version": "1", "requires": [], "domain": "copy"} },
+    { "path": "copy.pricing.page_title", "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Pricing"}}], "metadata": {"version": "1", "requires": [], "domain": "copy"} }
+  ]
+}
