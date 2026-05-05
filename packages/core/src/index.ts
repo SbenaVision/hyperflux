@@ -28,6 +28,7 @@ export {
 // Operator and function registries
 export {
   FunctionRegistry,
+  OperatorRegistryImpl,
   canonicalJSON,
   buildCacheKey,
 } from "./expressions";

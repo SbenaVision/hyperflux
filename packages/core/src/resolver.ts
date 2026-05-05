@@ -1,20 +1,15 @@
 /**
  * @file Resolver — the core rule evaluation engine.
- *
- * The `Resolver` evaluates HyperFlux rules against typed inputs, caches
- * results per request, and optionally records evaluation traces. It is the
- * hot path; every call to `evaluate` should complete in under 5 ms uncached
- * and under 1 ms cached.
- *
  * @module @hyperflux/core/resolver
  * @since 0.1.0
  */
 
-import type { TypeSpec } from "./schema";
+import type { TypeSpec, Expression, Rule } from "./schema";
 import type { FunctionRegistry, OperatorRegistry } from "./expressions";
+import { buildCacheKey } from "./expressions";
 import type { RuleStore } from "./rules";
-import type { TraceTree } from "./trace";
-import type {
+import type { TraceNode, TraceTree } from "./trace";
+import {
   RuleNotFoundError,
   InputTypeError,
   OutputTypeError,
@@ -26,168 +21,97 @@ import type {
 // Options
 // ---------------------------------------------------------------------------
 
-/**
- * Configuration for constructing a {@link Resolver}.
- *
- * All three dependencies are required. The `ruleStore` is typically produced
- * by `RuleLoader.load()` and replaced atomically on hot reload.
- *
- * @since 0.1.0
- * @public
- *
- * @see {@link Resolver}
- */
 export interface ResolverOptions {
-  /**
-   * The loaded, validated, and indexed rule store.
-   * On hot reload the store reference is replaced; the resolver reads this
-   * reference on every evaluation, so swapping the store immediately takes
-   * effect without constructing a new `Resolver`.
-   */
   ruleStore: RuleStore;
-
-  /**
-   * Registry of pure functions available to `fn` expressions.
-   * Must be fully populated before the resolver is used.
-   */
   functionRegistry: FunctionRegistry;
-
-  /**
-   * Registry of operators loaded from `defaults/operators.json`.
-   */
   operatorRegistry: OperatorRegistry;
 }
 
-/**
- * Options for constructing a {@link RequestContext}.
- *
- * @since 0.1.0
- * @public
- */
 export interface RequestContextOptions {
-  /**
-   * When `true`, the context records every rule evaluation as a
-   * {@link TraceNode}. Retrieve the result via `getTrace()` after evaluation.
-   * @defaultValue `false`
-   */
   recordTrace?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Runtime type check
+// ---------------------------------------------------------------------------
+
+function checkType(value: unknown, spec: TypeSpec): boolean {
+  switch (spec.type) {
+    case "any":     return true;
+    case "null":    return value === null;
+    case "string":  return typeof value === "string";
+    case "number":  return typeof value === "number";
+    case "boolean": return typeof value === "boolean";
+    case "array":
+      if (!Array.isArray(value)) return false;
+      return value.every((item) => checkType(item, spec.items));
+    case "object": {
+      if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+      const obj = value as Record<string, unknown>;
+      for (const [key, fieldSpec] of Object.entries(spec.shape)) {
+        if (!checkType(obj[key], fieldSpec)) return false;
+      }
+      return true;
+    }
+  }
+}
+
+function typeSpecName(spec: TypeSpec): string {
+  if (spec.type === "array") return `array<${typeSpecName(spec.items)}>`;
+  if (spec.type === "object") return "object";
+  return spec.type;
+}
+
+function runtimeTypeName(value: unknown): string {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "array";
+  return typeof value;
 }
 
 // ---------------------------------------------------------------------------
 // RequestContext
 // ---------------------------------------------------------------------------
 
-/**
- * Per-request evaluation context for the {@link Resolver}.
- *
- * Each HTTP request (or equivalent logical unit of work) should create its
- * own `RequestContext`. The context provides:
- * - **Per-request memoization**: identical `(path, inputs)` pairs within the
- *   same context return cached results without re-evaluation (REQ-105, REQ-107).
- * - **Trace recording**: when `recordTrace: true`, builds a {@link TraceTree}
- *   of every evaluation triggered during this request (REQ-301, REQ-302).
- *
- * Contexts are not shared between requests. Creating a new context clears the
- * cache (REQ-107).
- *
- * @since 0.1.0
- * @public
- *
- * @example
- * ```ts
- * // Basic usage — per-request caching
- * const ctx = new RequestContext();
- * const fee = resolver.evaluate<number>("pricing.atm.fee", { amount: 500 }, ctx);
- *
- * // Trace recording
- * const tracedCtx = new RequestContext({ recordTrace: true });
- * resolver.evaluate("pricing.total", { amount: 500 }, tracedCtx);
- * const tree = tracedCtx.getTrace();
- * ```
- *
- * @see {@link Resolver}
- * @see {@link TraceTree}
- */
 export class RequestContext {
-  /**
-   * Whether this context is recording evaluation traces.
-   * Set by `RequestContextOptions.recordTrace` at construction time.
-   *
-   * @since 0.1.0
-   */
   readonly recordTrace: boolean;
+  private readonly _cache = new Map<string, unknown>();
+  private readonly _traceNodes: TraceNode[] = [];
 
-  /**
-   * Constructs a new `RequestContext`.
-   *
-   * @param options - Optional configuration. Defaults to `{ recordTrace: false }`.
-   * @since 0.1.0
-   */
   constructor(options?: RequestContextOptions) {
     this.recordTrace = options?.recordTrace ?? false;
-    throw new Error("Not implemented");
   }
 
-  /**
-   * Returns the complete evaluation trace, or `null` if `recordTrace` is
-   * `false` or no evaluations have been performed yet.
-   *
-   * @returns The recorded trace tree, or `null`.
-   * @since 0.1.0
-   * @public
-   *
-   * @see {@link TraceTree}
-   */
   getTrace(): TraceTree | null {
-    throw new Error("Not implemented");
+    if (!this.recordTrace || this._traceNodes.length === 0) return null;
+    const root = this._traceNodes[0];
+    let totalTime = 0;
+    let evalCount = 0;
+    let cacheHits = 0;
+    const walk = (node: TraceNode) => {
+      totalTime += node.timeMs;
+      evalCount++;
+      if (node.cached) cacheHits++;
+      for (const child of node.children) walk(child);
+    };
+    walk(root);
+    return { root, totalTimeMs: totalTime, evaluationCount: evalCount, cacheHitCount: cacheHits };
   }
 
-  /**
-   * Returns a cached evaluation result by cache key, or `undefined` if the
-   * key is not in the cache.
-   *
-   * @param key - Cache key produced by `buildCacheKey(path, inputs)`.
-   * @returns The cached value, or `undefined`.
-   * @since 0.1.0
-   * @internal
-   */
   getCacheEntry(key: string): unknown | undefined {
-    throw new Error("Not implemented");
+    return this._cache.has(key) ? this._cache.get(key) : undefined;
   }
 
-  /**
-   * Stores an evaluation result in the per-request cache.
-   *
-   * @param key - Cache key produced by `buildCacheKey(path, inputs)`.
-   * @param value - The evaluated result to cache.
-   * @since 0.1.0
-   * @internal
-   */
   setCacheEntry(key: string, value: unknown): void {
-    throw new Error("Not implemented");
+    this._cache.set(key, value);
   }
 
-  /**
-   * Records a completed evaluation node into the trace tree.
-   * No-op when `recordTrace` is `false`.
-   *
-   * @param node - The completed trace node to append.
-   * @since 0.1.0
-   * @internal
-   */
-  recordEvaluation(node: import("./trace").TraceNode): void {
-    throw new Error("Not implemented");
+  recordEvaluation(node: TraceNode): void {
+    if (!this.recordTrace) return;
+    this._traceNodes.push(node);
   }
 
-  /**
-   * Returns the total number of cache entries stored in this context.
-   *
-   * @returns The cache entry count.
-   * @since 0.1.0
-   * @public
-   */
   get cacheSize(): number {
-    throw new Error("Not implemented");
+    return this._cache.size;
   }
 }
 
@@ -195,173 +119,241 @@ export class RequestContext {
 // Resolver
 // ---------------------------------------------------------------------------
 
-/**
- * Evaluates HyperFlux rules against typed inputs with per-request memoization.
- *
- * The resolver is the hot path of the HyperFlux runtime. It locates a rule by
- * path, validates inputs against declared types, iterates cases in order to
- * find the first match, validates the output type, and returns the result.
- * Results are cached per `RequestContext` using canonical JSON cache keys
- * (REQ-105, REQ-106).
- *
- * A single `Resolver` instance is long-lived (per server / per React app).
- * Swap the `ruleStore` reference on hot reload without constructing a new
- * `Resolver`.
- *
- * @since 0.1.0
- * @public
- *
- * @example
- * ```ts
- * const resolver = new Resolver({ ruleStore, functionRegistry, operatorRegistry });
- * const ctx = new RequestContext();
- *
- * // Evaluate returns the typed result
- * const fee = resolver.evaluate<number>("pricing.atm.fee", { amount: 500 }, ctx);
- * // fee === 2.5
- * ```
- *
- * @see {@link RequestContext}
- * @see {@link ResolverOptions}
- */
 export class Resolver {
-  /**
-   * Constructs a new `Resolver` with the given dependencies.
-   *
-   * @param options - Required resolver dependencies.
-   * @since 0.1.0
-   */
+  private _ruleStore: RuleStore;
+  private readonly _functionRegistry: FunctionRegistry;
+  private readonly _operatorRegistry: OperatorRegistry;
+
   constructor(options: ResolverOptions) {
-    throw new Error("Not implemented");
+    this._ruleStore = options.ruleStore;
+    this._functionRegistry = options.functionRegistry;
+    this._operatorRegistry = options.operatorRegistry;
   }
 
-  /**
-   * Evaluates a rule by path and returns the result as type `T`.
-   *
-   * **Algorithm** (per spec §7.2):
-   * 1. Look up `path` in `ruleStore`; throw `RuleNotFoundError` if absent.
-   * 2. Validate each input value against its declared `TypeSpec`.
-   * 3. Compute canonical cache key; return cached value if present in `ctx`.
-   * 4. Iterate `rule.cases` in order; evaluate each `when` expression.
-   * 5. On first match, evaluate `then`; validate output type.
-   * 6. Cache and return.
-   *
-   * @typeParam T - Expected return type; no runtime type assertion is performed
-   *   beyond the declared output TypeSpec check. Use {@link evaluateAs} for
-   *   additional runtime type narrowing.
-   * @param path - Fully-qualified rule path, e.g. `"pricing.atm.fee"`.
-   * @param inputs - Plain JSON-serializable input record. Keys must match the rule's declared inputs.
-   * @param ctx - Optional per-request context for caching and tracing. If omitted, no caching occurs.
-   * @returns The evaluated output value cast to `T`.
-   * @throws {RuleNotFoundError} If no rule with `path` exists in the store (HF001).
-   * @throws {InputTypeError} If an input value does not match its declared TypeSpec (HF002).
-   * @throws {OutputTypeError} If the matched case's output violates the rule's output TypeSpec (HF003).
-   * @throws {NoMatchingCaseError} If no case matches and the rule has no default case (HF004).
-   * @throws {FunctionNotRegisteredError} If an `fn` expression references an unregistered function (HF005).
-   * @since 0.1.0
-   * @public
-   *
-   * @example
-   * ```ts
-   * const fee = resolver.evaluate<number>("pricing.atm.fee", { amount: 500 }, ctx);
-   * const label = resolver.evaluate<string>("ui.labels.submit_button", {}, ctx);
-   * ```
-   *
-   * @see {@link evaluateAs} for TypeSpec-based runtime narrowing.
-   * @see {@link RequestContext} for caching and tracing.
-   */
   evaluate<T = unknown>(
     path: string,
     inputs: Record<string, unknown>,
     ctx?: RequestContext
   ): T {
-    throw new Error("Not implemented");
+    return this._evaluate<T>(path, inputs, ctx);
   }
 
-  /**
-   * Like {@link evaluate}, but additionally validates that the result conforms
-   * to the provided `expectedType` TypeSpec at runtime.
-   *
-   * Use this when you want to assert a more specific type than the rule's
-   * declared output allows, or when consuming rules whose output is `any`.
-   *
-   * @typeParam T - TypeScript type to cast the result to.
-   * @param path - Fully-qualified rule path.
-   * @param expectedType - TypeSpec that the result must satisfy. Validated after evaluation.
-   * @param inputs - Plain JSON-serializable input record.
-   * @param ctx - Optional per-request context.
-   * @returns The evaluated output value cast to `T`.
-   * @throws {RuleNotFoundError} If no rule with `path` exists (HF001).
-   * @throws {InputTypeError} If an input value type mismatches (HF002).
-   * @throws {OutputTypeError} If the result does not satisfy `expectedType` or the rule's declared output (HF003).
-   * @throws {NoMatchingCaseError} If no case matches and there is no default (HF004).
-   * @throws {FunctionNotRegisteredError} If an `fn` expression references an unregistered function (HF005).
-   * @since 0.1.0
-   * @public
-   *
-   * @example
-   * ```ts
-   * const fee = resolver.evaluateAs<number>(
-   *   "pricing.atm.fee",
-   *   { type: "number" },
-   *   { amount: 500 },
-   *   ctx
-   * );
-   * ```
-   *
-   * @see {@link evaluate}
-   */
   evaluateAs<T = unknown>(
     path: string,
     expectedType: TypeSpec,
     inputs: Record<string, unknown>,
     ctx?: RequestContext
   ): T {
-    throw new Error("Not implemented");
+    const result = this._evaluate<T>(path, inputs, ctx);
+    if (!checkType(result, expectedType)) {
+      throw new OutputTypeError({
+        path,
+        caseIndex: -1,
+        expected: typeSpecName(expectedType),
+        actual: runtimeTypeName(result),
+      });
+    }
+    return result;
   }
 
-  /**
-   * Replaces the current rule store reference.
-   *
-   * Called by the hot-reload mechanism in dev mode when a rule file changes
-   * and the new store is validated successfully. Thread-safe as long as JS
-   * remains single-threaded.
-   *
-   * @param ruleStore - The new, validated `RuleStore` to use for subsequent evaluations.
-   * @since 0.1.0
-   * @internal
-   */
   swapRuleStore(ruleStore: RuleStore): void {
-    throw new Error("Not implemented");
+    this._ruleStore = ruleStore;
   }
 
-  /**
-   * Exposes the current rule store for inspection.
-   *
-   * @since 0.1.0
-   * @public
-   */
-  get ruleStore(): RuleStore {
-    throw new Error("Not implemented");
+  get ruleStore(): RuleStore { return this._ruleStore; }
+  get operatorRegistry(): OperatorRegistry { return this._operatorRegistry; }
+  get functionRegistry(): FunctionRegistry { return this._functionRegistry; }
+
+  // ---------------------------------------------------------------------------
+  // Core evaluation
+  // ---------------------------------------------------------------------------
+
+  private _evaluate<T>(
+    path: string,
+    inputs: Record<string, unknown>,
+    ctx?: RequestContext
+  ): T {
+    // 1. Look up rule
+    const rule = this._ruleStore.get(path);
+    if (!rule) throw new RuleNotFoundError({ path });
+
+    // 2. Validate inputs
+    this._validateInputs(rule, inputs);
+
+    // 3. Check cache
+    const cacheKey = buildCacheKey(path, inputs);
+    if (ctx) {
+      const cached = ctx.getCacheEntry(cacheKey);
+      if (cached !== undefined) {
+        if (ctx.recordTrace) {
+          ctx.recordEvaluation({
+            path,
+            inputs,
+            output: cached,
+            caseIndex: -1,
+            timeMs: 0,
+            cached: true,
+            children: [],
+          });
+        }
+        return cached as T;
+      }
+    }
+
+    // 4–6. Iterate cases
+    const start = performance.now();
+    let matched = false;
+    let matchedCaseIndex = 0;
+    let output: unknown;
+
+    for (let i = 0; i < rule.cases.length; i++) {
+      const c = rule.cases[i];
+      if (c.when === undefined) {
+        // Unconditional default
+        output = this._evaluateExpression(c.then, inputs, path, ctx);
+        matchedCaseIndex = i;
+        matched = true;
+        break;
+      }
+      const guardResult = this._evaluateExpression(c.when, inputs, path, ctx);
+      if (guardResult === true) {
+        output = this._evaluateExpression(c.then, inputs, path, ctx);
+        matchedCaseIndex = i;
+        matched = true;
+        break;
+      }
+    }
+
+    if (!matched) {
+      throw new NoMatchingCaseError({ path, inputs });
+    }
+
+    // 6. Validate output type
+    if (!checkType(output, rule.output)) {
+      throw new OutputTypeError({
+        path,
+        caseIndex: matchedCaseIndex,
+        expected: typeSpecName(rule.output),
+        actual: runtimeTypeName(output),
+      });
+    }
+
+    const timeMs = performance.now() - start;
+
+    // 7. Cache result
+    if (ctx) {
+      ctx.setCacheEntry(cacheKey, output);
+      if (ctx.recordTrace) {
+        ctx.recordEvaluation({
+          path,
+          inputs,
+          output,
+          caseIndex: matchedCaseIndex,
+          timeMs,
+          cached: false,
+          children: [],
+        });
+      }
+    }
+
+    return output as T;
   }
 
-  /**
-   * Exposes the operator registry for inspection.
-   *
-   * @since 0.1.0
-   * @public
-   */
-  get operatorRegistry(): OperatorRegistry {
-    throw new Error("Not implemented");
+  private _validateInputs(rule: Rule, inputs: Record<string, unknown>): void {
+    for (const inputDecl of rule.inputs) {
+      const value = inputs[inputDecl.name];
+      if (!checkType(value, inputDecl.type)) {
+        throw new InputTypeError({
+          name: inputDecl.name,
+          path: rule.path,
+          expected: typeSpecName(inputDecl.type),
+          actual: runtimeTypeName(value),
+        });
+      }
+    }
   }
 
-  /**
-   * Exposes the function registry for inspection.
-   *
-   * @since 0.1.0
-   * @public
-   */
-  get functionRegistry(): FunctionRegistry {
-    throw new Error("Not implemented");
+  private _evaluateExpression(
+    expr: Expression,
+    inputs: Record<string, unknown>,
+    rulePath: string,
+    ctx?: RequestContext
+  ): unknown {
+    switch (expr.kind) {
+      case "literal":
+        return expr.value;
+
+      case "input": {
+        let val: unknown = inputs;
+        for (const key of expr.path) {
+          if (typeof val !== "object" || val === null) return undefined;
+          val = (val as Record<string, unknown>)[key];
+        }
+        return val;
+      }
+
+      case "rule": {
+        const ruleInputs: Record<string, unknown> = {};
+        if (expr.args && expr.args.length > 0) {
+          const targetRule = this._ruleStore.get(expr.path);
+          if (targetRule) {
+            for (let i = 0; i < expr.args.length; i++) {
+              const inputName = targetRule.inputs[i]?.name ?? String(i);
+              ruleInputs[inputName] = this._evaluateExpression(
+                expr.args[i],
+                inputs,
+                rulePath,
+                ctx
+              );
+            }
+          }
+        }
+        return this._evaluate(expr.path, ruleInputs, ctx);
+      }
+
+      case "fn": {
+        if (!this._functionRegistry.has(expr.name)) {
+          throw new FunctionNotRegisteredError({ name: expr.name, path: rulePath });
+        }
+        const def = this._functionRegistry.get(expr.name)!;
+        const fnInputs: Record<string, unknown> = {};
+        for (let i = 0; i < expr.args.length; i++) {
+          const paramName = def.inputs[i]?.name ?? String(i);
+          fnInputs[paramName] = this._evaluateExpression(expr.args[i], inputs, rulePath, ctx);
+        }
+        return def.implementation(fnInputs);
+      }
+
+      case "op": {
+        const opDef = this._operatorRegistry.getOperator(expr.op);
+        if (!opDef) {
+          throw new Error(`Unknown operator '${expr.op}' in rule '${rulePath}'`);
+        }
+        const args = expr.args.map((a) =>
+          this._evaluateExpression(a, inputs, rulePath, ctx)
+        );
+        return this._applyOperator(expr.op, args);
+      }
+    }
+  }
+
+  private _applyOperator(op: string, args: unknown[]): unknown {
+    switch (op) {
+      case "==":  return args[0] === args[1];
+      case "!=":  return args[0] !== args[1];
+      case "<":   return (args[0] as number) < (args[1] as number);
+      case "<=":  return (args[0] as number) <= (args[1] as number);
+      case ">":   return (args[0] as number) > (args[1] as number);
+      case ">=":  return (args[0] as number) >= (args[1] as number);
+      case "+":   return (args[0] as number) + (args[1] as number);
+      case "-":   return (args[0] as number) - (args[1] as number);
+      case "*":   return (args[0] as number) * (args[1] as number);
+      case "/":   return (args[0] as number) / (args[1] as number);
+      case "%":   return (args[0] as number) % (args[1] as number);
+      case "AND": return args.every(Boolean);
+      case "OR":  return args.some(Boolean);
+      case "NOT": return !args[0];
+      default:    throw new Error(`No implementation for operator '${op}'`);
+    }
   }
 }

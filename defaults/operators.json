@@ -1,32 +1,18 @@
-/**
- * @file defaults/operators.json
- *
- * @description
- * DSL operator definitions for the HyperFlux expression evaluator.
- *
- * The resolver and the shallow type checker both read this file at startup
- * to populate the OperatorRegistry. Adding, removing, or changing an operator
- * requires editing this file only — no source changes required (REQ-009,
- * REQ-703).
- *
- * @schema
- * {
- *   "operators": Array<{
- *     "op":         string,        // Symbol or name used in OpExpression.op
- *     "arity":      1 | 2 | "n",   // Fixed unary, binary, or variadic
- *     "min"?:       number,        // Minimum args for arity "n"
- *     "input_types": string | string[], // "any" | "number" | "boolean" | positional array
- *     "output_type": string        // Type returned by this operator
- *   }>
- * }
- *
- * @example
- * {
- *   "operators": [
- *     { "op": "==", "arity": 2, "input_types": ["any","any"], "output_type": "boolean" },
- *     { "op": "AND", "arity": "n", "min": 2, "input_types": "boolean", "output_type": "boolean" }
- *   ]
- * }
- *
- * @since 0.1.0
- */
+{
+  "operators": [
+    { "op": "==",  "arity": 2,   "input_types": ["any", "any"],              "output_type": "boolean" },
+    { "op": "!=",  "arity": 2,   "input_types": ["any", "any"],              "output_type": "boolean" },
+    { "op": "<",   "arity": 2,   "input_types": ["number", "number"],        "output_type": "boolean" },
+    { "op": "<=",  "arity": 2,   "input_types": ["number", "number"],        "output_type": "boolean" },
+    { "op": ">",   "arity": 2,   "input_types": ["number", "number"],        "output_type": "boolean" },
+    { "op": ">=",  "arity": 2,   "input_types": ["number", "number"],        "output_type": "boolean" },
+    { "op": "+",   "arity": 2,   "input_types": ["number", "number"],        "output_type": "number"  },
+    { "op": "-",   "arity": 2,   "input_types": ["number", "number"],        "output_type": "number"  },
+    { "op": "*",   "arity": 2,   "input_types": ["number", "number"],        "output_type": "number"  },
+    { "op": "/",   "arity": 2,   "input_types": ["number", "number"],        "output_type": "number"  },
+    { "op": "%",   "arity": 2,   "input_types": ["number", "number"],        "output_type": "number"  },
+    { "op": "AND", "arity": "n", "min": 2, "input_types": "boolean",        "output_type": "boolean" },
+    { "op": "OR",  "arity": "n", "min": 2, "input_types": "boolean",        "output_type": "boolean" },
+    { "op": "NOT", "arity": 1,   "input_types": ["boolean"],                 "output_type": "boolean" }
+  ]
+}

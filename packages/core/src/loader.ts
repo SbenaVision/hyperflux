@@ -1,269 +1,469 @@
 /**
  * @file Rule loader — scans, validates, indexes, and hot-reloads rule files.
- *
- * `RuleLoader` is the entry point for loading a HyperFlux rule store from
- * disk. It reads every `*.json` file in the configured rules directory,
- * validates them against the {@link DomainFile} schema, builds a
- * {@link RuleStore} with a dependency graph, runs the shallow type checker,
- * and rejects the entire store on any error (fail-fast at startup).
- *
- * In development mode it also starts a file watcher that re-runs the same
- * pipeline on any file change and atomically swaps the store on success,
- * preserving the old store on failure.
- *
  * @module @hyperflux/core/loader
  * @since 0.1.0
  */
 
-import type { DomainFile } from "./schema";
+import { readdir, readFile, watch as fsWatch } from "node:fs/promises";
+import { join, basename, extname } from "node:path";
+import type { DomainFile, Rule, Expression } from "./schema";
+import { DomainFile as DomainFileSchema } from "./schema";
 import type { FunctionRegistry, OperatorRegistry } from "./expressions";
 import type { RuleStore } from "./rules";
-import type { HyperFluxError, LoadError } from "./errors";
+import { RuleStoreImpl, DependencyGraphImpl } from "./rules";
+import {
+  HyperFluxError,
+  LoadError,
+  DomainMismatchError,
+  DuplicatePathError,
+  RuleCycleError,
+  ShallowTypeError,
+} from "./errors";
 
 // ---------------------------------------------------------------------------
-// Options
+// Options and result types
 // ---------------------------------------------------------------------------
 
-/**
- * Options for constructing a {@link RuleLoader}.
- *
- * @since 0.1.0
- * @public
- */
 export interface LoaderOptions {
-  /**
-   * Absolute or CWD-relative path to the directory containing rule JSON files.
-   * Defaults to `"rules"` relative to `process.cwd()` if not provided.
-   * The default glob patterns are loaded from `defaults/watch-patterns.json`.
-   */
   rulesDir: string;
-
-  /**
-   * Populated function registry used for shallow type checking during load.
-   * Must be fully populated before calling `load()`.
-   */
   functionRegistry: FunctionRegistry;
-
-  /**
-   * Operator registry populated from `defaults/operators.json`.
-   */
   operatorRegistry: OperatorRegistry;
-
-  /**
-   * Runtime environment.
-   * In `"production"` mode hot reload is disabled regardless of `watchPatterns`.
-   * @defaultValue `"development"` when `NODE_ENV !== "production"`.
-   */
   env?: "development" | "production";
-
-  /**
-   * Custom glob patterns for files to watch in dev mode.
-   * When omitted, patterns are loaded from `defaults/watch-patterns.json`.
-   */
   watchPatterns?: string[];
 }
 
-// ---------------------------------------------------------------------------
-// LoadResult
-// ---------------------------------------------------------------------------
-
-/**
- * The successful result of `RuleLoader.load()`.
- *
- * @since 0.1.0
- * @public
- */
 export interface LoadResult {
-  /**
-   * Validated, indexed, dependency-sorted rule store ready to pass to
-   * `Resolver` or `Analyzer`.
-   */
   ruleStore: RuleStore;
-
-  /**
-   * The parsed domain file records, in file-system scan order.
-   * Useful for tools (lint, trace) that need file-level metadata.
-   */
   domainFiles: ReadonlyArray<DomainFile>;
-
-  /**
-   * Non-fatal warnings produced during loading, e.g. empty domain files.
-   * The store is valid despite warnings.
-   */
   warnings: ReadonlyArray<string>;
 }
 
-// ---------------------------------------------------------------------------
-// HotReloadHandler
-// ---------------------------------------------------------------------------
-
-/**
- * Callback type for successful hot-reload events.
- *
- * Called by `RuleLoader.watch()` each time a rule file changes and the new
- * store validates successfully.
- *
- * @param result - The new load result with the updated rule store.
- * @since 0.1.0
- * @public
- */
 export type HotReloadSuccessHandler = (result: LoadResult) => void;
-
-/**
- * Callback type for hot-reload validation failures.
- *
- * Called when a rule file change produces an invalid store. The previous
- * valid store is preserved; callers should log the error and continue serving
- * the old rules.
- *
- * @param error - The load error describing what went wrong.
- * @since 0.1.0
- * @public
- */
 export type HotReloadErrorHandler = (error: LoadError) => void;
-
-/**
- * Function returned by `RuleLoader.watch()` that stops the file watcher.
- *
- * Call this during application shutdown or in tests to prevent resource leaks.
- *
- * @returns `void`.
- * @since 0.1.0
- * @public
- */
 export type StopWatching = () => void;
 
 // ---------------------------------------------------------------------------
-// RuleLoader
+// Helpers — dependency extraction
 // ---------------------------------------------------------------------------
 
-/**
- * Scans a rules directory, validates all domain files, builds a
- * {@link RuleStore}, and optionally starts a hot-reload watcher in dev mode.
- *
- * **Load pipeline** (per spec §6.3):
- * 1. Scan `rulesDir` for `*.json` files.
- * 2. Parse and validate each file with the {@link DomainFile} Zod schema.
- * 3. Assert that `domain` matches the filename stem.
- * 4. Assert that every rule's `path` starts with `<domain>.`.
- * 5. Assert that no two rules share the same `path`.
- * 6. Build the dependency graph; reject cycles.
- * 7. Run the shallow type checker on all rules.
- * 8. On any failure: collect all errors and throw a {@link LoadError}.
- * 9. On success: return a {@link LoadResult} with the validated store.
- *
- * @since 0.1.0
- * @public
- *
- * @example
- * ```ts
- * const loader = new RuleLoader({
- *   rulesDir: "./rules",
- *   functionRegistry,
- *   operatorRegistry,
- *   env: "development",
- * });
- *
- * const { ruleStore } = await loader.load();
- *
- * // Start hot reload in dev
- * const stop = loader.watch(
- *   (result) => resolver.swapRuleStore(result.ruleStore),
- *   (err) => console.error("Hot reload failed:", err.message),
- * );
- * process.on("SIGTERM", stop);
- * ```
- *
- * @see {@link LoadResult}
- * @see {@link LoadError}
- */
+function collectRuleDepsFromExpression(expr: Expression, deps: Set<string>): void {
+  switch (expr.kind) {
+    case "rule":
+      deps.add(expr.path);
+      if (expr.args) {
+        for (const arg of expr.args) collectRuleDepsFromExpression(arg, deps);
+      }
+      break;
+    case "fn":
+    case "op":
+      for (const arg of expr.args) collectRuleDepsFromExpression(arg, deps);
+      break;
+    case "literal":
+    case "input":
+      break;
+  }
+}
+
+function collectRuleDepsFromRule(rule: Rule): string[] {
+  const deps = new Set<string>(rule.metadata.requires);
+  for (const c of rule.cases) {
+    if (c.when) collectRuleDepsFromExpression(c.when, deps);
+    collectRuleDepsFromExpression(c.then, deps);
+  }
+  return Array.from(deps);
+}
+
+// ---------------------------------------------------------------------------
+// Helpers — topological sort (Kahn's algorithm)
+// ---------------------------------------------------------------------------
+
+function topologicalSort(
+  paths: string[],
+  deps: Map<string, string[]>
+): { order: string[]; cycle: string[] | null } {
+  const inDegree = new Map<string, number>();
+  const graph = new Map<string, string[]>(); // path -> dependents (reverse)
+
+  for (const p of paths) {
+    if (!inDegree.has(p)) inDegree.set(p, 0);
+    if (!graph.has(p)) graph.set(p, []);
+  }
+
+  for (const [path, dependencies] of deps) {
+    for (const dep of dependencies) {
+      if (!inDegree.has(dep)) inDegree.set(dep, 0);
+      if (!graph.has(dep)) graph.set(dep, []);
+      graph.get(dep)!.push(path);
+      inDegree.set(path, (inDegree.get(path) ?? 0) + 1);
+    }
+  }
+
+  const queue: string[] = [];
+  for (const [p, deg] of inDegree) {
+    if (deg === 0) queue.push(p);
+  }
+
+  const order: string[] = [];
+  while (queue.length > 0) {
+    const node = queue.shift()!;
+    order.push(node);
+    for (const dependent of graph.get(node) ?? []) {
+      const newDeg = (inDegree.get(dependent) ?? 1) - 1;
+      inDegree.set(dependent, newDeg);
+      if (newDeg === 0) queue.push(dependent);
+    }
+  }
+
+  if (order.length < inDegree.size) {
+    // Cycle exists — find it via DFS
+    const visited = new Set<string>();
+    const inStack = new Set<string>();
+    let cyclePath: string[] = [];
+
+    function dfs(node: string): boolean {
+      visited.add(node);
+      inStack.add(node);
+      for (const dep of deps.get(node) ?? []) {
+        if (!visited.has(dep)) {
+          if (dfs(dep)) return true;
+        } else if (inStack.has(dep)) {
+          cyclePath = [dep, node];
+          return true;
+        }
+      }
+      inStack.delete(node);
+      return false;
+    }
+
+    for (const p of paths) {
+      if (!visited.has(p)) dfs(p);
+      if (cyclePath.length > 0) break;
+    }
+
+    return { order: [], cycle: cyclePath };
+  }
+
+  return { order, cycle: null };
+}
+
+// ---------------------------------------------------------------------------
+// Helpers — shallow type checker
+// ---------------------------------------------------------------------------
+
+function shallowCheckExpression(
+  expr: Expression,
+  rule: Rule,
+  operatorRegistry: OperatorRegistry,
+  functionRegistry: FunctionRegistry,
+  errors: HyperFluxError[]
+): void {
+  switch (expr.kind) {
+    case "op": {
+      if (!operatorRegistry.hasOperator(expr.op)) {
+        errors.push(
+          new ShallowTypeError({
+            path: rule.path,
+            violation: `Unknown operator '${expr.op}'`,
+          })
+        );
+      } else {
+        const def = operatorRegistry.getOperator(expr.op)!;
+        const expectedArity = def.arity;
+        if (expectedArity === 1 && expr.args.length !== 1) {
+          errors.push(
+            new ShallowTypeError({
+              path: rule.path,
+              violation: `Operator '${expr.op}' expects 1 argument, got ${expr.args.length}`,
+            })
+          );
+        } else if (expectedArity === 2 && expr.args.length !== 2) {
+          errors.push(
+            new ShallowTypeError({
+              path: rule.path,
+              violation: `Operator '${expr.op}' expects 2 arguments, got ${expr.args.length}`,
+            })
+          );
+        } else if (expectedArity === "n" && def.min !== undefined && expr.args.length < def.min) {
+          errors.push(
+            new ShallowTypeError({
+              path: rule.path,
+              violation: `Operator '${expr.op}' requires at least ${def.min} arguments, got ${expr.args.length}`,
+            })
+          );
+        }
+      }
+      for (const arg of expr.args) {
+        shallowCheckExpression(arg, rule, operatorRegistry, functionRegistry, errors);
+      }
+      break;
+    }
+    case "fn": {
+      if (!functionRegistry.has(expr.name)) {
+        errors.push(
+          new ShallowTypeError({
+            path: rule.path,
+            violation: `Unknown function '${expr.name}'`,
+          })
+        );
+      } else {
+        const def = functionRegistry.get(expr.name)!;
+        if (expr.args.length !== def.inputs.length) {
+          errors.push(
+            new ShallowTypeError({
+              path: rule.path,
+              violation: `Function '${expr.name}' expects ${def.inputs.length} arguments, got ${expr.args.length}`,
+            })
+          );
+        }
+      }
+      for (const arg of expr.args) {
+        shallowCheckExpression(arg, rule, operatorRegistry, functionRegistry, errors);
+      }
+      break;
+    }
+    case "rule":
+      if (expr.args) {
+        for (const arg of expr.args) {
+          shallowCheckExpression(arg, rule, operatorRegistry, functionRegistry, errors);
+        }
+      }
+      break;
+    case "literal":
+    case "input":
+      break;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Core pipeline
+// ---------------------------------------------------------------------------
+
+async function runLoadPipeline(
+  rulesDir: string,
+  operatorRegistry: OperatorRegistry,
+  functionRegistry: FunctionRegistry
+): Promise<LoadResult> {
+  const errors: HyperFluxError[] = [];
+  const warnings: string[] = [];
+  const domainFiles: DomainFile[] = [];
+  const allRules: Rule[] = [];
+  const pathToFile = new Map<string, string>();
+
+  // 1. Scan directory
+  let entries: string[];
+  try {
+    const dirents = await readdir(rulesDir, { withFileTypes: true });
+    entries = dirents
+      .filter((d) => d.isFile() && extname(d.name) === ".json")
+      .map((d) => join(rulesDir, d.name));
+  } catch {
+    warnings.push(`Rules directory '${rulesDir}' not found or empty`);
+    entries = [];
+  }
+
+  if (entries.length === 0) {
+    warnings.push("No rule files found");
+  }
+
+  // 2–4. Parse, validate domain, validate paths
+  for (const filePath of entries) {
+    const filenameStem = basename(filePath, ".json");
+    let raw: unknown;
+    try {
+      raw = JSON.parse(await readFile(filePath, "utf8"));
+    } catch {
+      errors.push(
+        new ShallowTypeError({
+          path: filenameStem,
+          violation: `Failed to parse JSON in '${filePath}'`,
+        })
+      );
+      continue;
+    }
+
+    const result = DomainFileSchema.safeParse(raw);
+    if (!result.success) {
+      errors.push(
+        new ShallowTypeError({
+          path: filenameStem,
+          violation: `Schema validation failed in '${filePath}': ${result.error.issues.map((i) => i.message).join("; ")}`,
+        })
+      );
+      continue;
+    }
+
+    const domainFile = result.data;
+
+    // Step 3: domain === filename stem
+    if (domainFile.domain !== filenameStem) {
+      errors.push(
+        new DomainMismatchError({
+          declaredDomain: domainFile.domain,
+          filenameDomain: filenameStem,
+          filePath,
+        })
+      );
+    }
+
+    // Step 4: every rule path starts with domain.
+    for (const rule of domainFile.rules) {
+      if (!rule.path.startsWith(domainFile.domain + ".")) {
+        errors.push(
+          new DomainMismatchError({
+            declaredDomain: rule.path.split(".")[0],
+            filenameDomain: domainFile.domain,
+            filePath,
+          })
+        );
+      }
+    }
+
+    if (domainFile.rules.length === 0) {
+      warnings.push(`Domain file '${filePath}' has no rules`);
+    }
+
+    domainFiles.push(domainFile);
+
+    // Step 5: check for duplicate paths
+    for (const rule of domainFile.rules) {
+      if (pathToFile.has(rule.path)) {
+        errors.push(
+          new DuplicatePathError({
+            path: rule.path,
+            files: [pathToFile.get(rule.path)!, filePath],
+          })
+        );
+      } else {
+        pathToFile.set(rule.path, filePath);
+        allRules.push(rule);
+      }
+    }
+  }
+
+  // Fail early on parse/schema errors before attempting graph operations
+  if (errors.length > 0) {
+    throw new LoadError({ errors });
+  }
+
+  // 5. Build dependency map
+  const deps = new Map<string, string[]>();
+  for (const rule of allRules) {
+    deps.set(rule.path, collectRuleDepsFromRule(rule));
+  }
+
+  // 6. Topological sort — detect cycles
+  const { order, cycle } = topologicalSort(allRules.map((r) => r.path), deps);
+  if (cycle) {
+    errors.push(new RuleCycleError({ cycle }));
+    throw new LoadError({ errors });
+  }
+
+  // 7. Shallow type check
+  for (const rule of allRules) {
+    for (const c of rule.cases) {
+      if (c.when) {
+        shallowCheckExpression(c.when, rule, operatorRegistry, functionRegistry, errors);
+      }
+      shallowCheckExpression(c.then, rule, operatorRegistry, functionRegistry, errors);
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new LoadError({ errors });
+  }
+
+  // 8. Build graph and store
+  const graph = new DependencyGraphImpl(deps, order);
+  const ruleStore = new RuleStoreImpl(allRules, domainFiles, graph);
+
+  return { ruleStore, domainFiles, warnings };
+}
+
+// ---------------------------------------------------------------------------
+// RuleLoader class
+// ---------------------------------------------------------------------------
+
 export class RuleLoader {
-  /**
-   * Constructs a new `RuleLoader` with the given options.
-   *
-   * @param options - Loader configuration including rules directory and registries.
-   * @since 0.1.0
-   */
+  private readonly _options: LoaderOptions;
+
   constructor(options: LoaderOptions) {
-    throw new Error("Not implemented");
+    this._options = options;
   }
 
-  /**
-   * Executes the full load pipeline asynchronously and returns the result.
-   *
-   * Reads all `*.json` files from `rulesDir`, validates them, builds the store,
-   * and returns the result. Any validation failure causes a {@link LoadError}
-   * containing all individual errors.
-   *
-   * @returns A promise that resolves to the validated `LoadResult`.
-   * @throws {LoadError} If any validation step fails (schema, domain match, path match, cycle, type check).
-   * @since 0.1.0
-   * @public
-   *
-   * @example
-   * ```ts
-   * const { ruleStore, warnings } = await loader.load();
-   * for (const warning of warnings) console.warn(warning);
-   * const resolver = new Resolver({ ruleStore, functionRegistry, operatorRegistry });
-   * ```
-   */
   async load(): Promise<LoadResult> {
-    throw new Error("Not implemented");
+    return runLoadPipeline(
+      this._options.rulesDir,
+      this._options.operatorRegistry,
+      this._options.functionRegistry
+    );
   }
 
-  /**
-   * Starts watching the rules directory for changes and re-runs the load
-   * pipeline on each change.
-   *
-   * **Dev-mode only**: calling `watch()` in production (`env === "production"`)
-   * returns a no-op `StopWatching` function and logs a warning.
-   *
-   * On a successful reload, `onSuccess` is called with the new store.
-   * On a failed reload, `onError` is called and the previous store is preserved.
-   * The watch glob patterns are loaded from `defaults/watch-patterns.json`
-   * unless overridden via `LoaderOptions.watchPatterns`.
-   *
-   * @param onSuccess - Called with the new load result when a reload succeeds.
-   * @param onError - Called with the load error when a reload fails.
-   * @returns A function that stops the watcher; call during shutdown.
-   * @since 0.1.0
-   * @public
-   *
-   * @example
-   * ```ts
-   * const stop = loader.watch(
-   *   ({ ruleStore }) => resolver.swapRuleStore(ruleStore),
-   *   (err) => process.stderr.write(err.message + "\n"),
-   * );
-   * ```
-   *
-   * @see {@link StopWatching}
-   * @see {@link HotReloadSuccessHandler}
-   * @see {@link HotReloadErrorHandler}
-   */
   watch(
     onSuccess: HotReloadSuccessHandler,
     onError: HotReloadErrorHandler
   ): StopWatching {
-    throw new Error("Not implemented");
+    if (this._options.env === "production") {
+      console.warn("HyperFlux: watch() called in production mode — no-op");
+      return () => {};
+    }
+
+    let aborted = false;
+    const ac = new AbortController();
+
+    const run = async () => {
+      try {
+        const watcher = fsWatch(this._options.rulesDir, {
+          signal: ac.signal,
+          recursive: false,
+        });
+        for await (const _event of watcher) {
+          if (aborted) break;
+          // Debounce rapid saves
+          await new Promise((r) => setTimeout(r, 50));
+          try {
+            const result = await this.load();
+            onSuccess(result);
+          } catch (err) {
+            if (err instanceof LoadError) {
+              onError(err);
+            }
+          }
+        }
+      } catch (err: unknown) {
+        if (
+          err instanceof Error &&
+          (err.name === "AbortError" || (err as NodeJS.ErrnoException).code === "ERR_ABORTED")
+        ) {
+          return;
+        }
+        if (!aborted) throw err;
+      }
+    };
+
+    run().catch(() => {});
+
+    return () => {
+      aborted = true;
+      ac.abort();
+    };
   }
 
-  /**
-   * Validates a single parsed `DomainFile` object without touching the
-   * filesystem. Useful for testing and for validating in-memory modifications.
-   *
-   * @param file - The domain file object to validate.
-   * @returns An array of `HyperFluxError` instances; empty if valid.
-   * @since 0.1.0
-   * @public
-   *
-   * @example
-   * ```ts
-   * const errors = loader.validateFile(parsedJson);
-   * if (errors.length > 0) errors.forEach(e => console.error(e.message));
-   * ```
-   */
   validateFile(file: DomainFile): HyperFluxError[] {
-    throw new Error("Not implemented");
+    const errors: HyperFluxError[] = [];
+    const filenameStem = file.domain;
+
+    for (const rule of file.rules) {
+      if (!rule.path.startsWith(filenameStem + ".")) {
+        errors.push(
+          new DomainMismatchError({
+            declaredDomain: rule.path.split(".")[0],
+            filenameDomain: filenameStem,
+            filePath: `<memory:${filenameStem}.json>`,
+          })
+        );
+      }
+    }
+
+    return errors;
   }
 }
