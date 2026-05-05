@@ -91,10 +91,63 @@ export interface TraceCliOptions {
 export const run: CommandRunner = async function runTrace(
   ctx: CliContext
 ): Promise<number> {
+  const { formatTrace, traceFromJSON, RequestContext } = await import("@hyperflux/core");
+  const { join } = await import("node:path");
+
+  const cliOpts: TraceCliOptions = {
+    verbose: Boolean(ctx.options["verbose"]),
+    slow: ctx.options["slow"] ? Number(ctx.options["slow"]) : undefined,
+    depth: ctx.options["depth"] ? Number(ctx.options["depth"]) : undefined,
+  };
+
+  // --input mode: evaluate a rule and show its trace
+  const inputRaw = ctx.options["input"] as string | undefined;
+  if (inputRaw) {
+    const rulePath = ctx.positional[0];
+    if (!rulePath) {
+      process.stderr.write("  error  usage: hf trace <rulePath> --input '<json>'\n");
+      return 1;
+    }
+
+    let inputs: Record<string, unknown>;
+    try {
+      inputs = JSON.parse(inputRaw);
+    } catch (err) {
+      process.stderr.write(`  error  --input must be valid JSON: ${String(err)}\n`);
+      return 1;
+    }
+
+    const rulesDir = join(
+      ctx.projectRoot,
+      (ctx.options["rules-dir"] as string | undefined) ?? "rules"
+    );
+
+    const { makeResolver } = await import("../lib/loader");
+    let resolver;
+    try {
+      resolver = await makeResolver(rulesDir);
+    } catch (err) {
+      process.stderr.write(`  error  failed to load rules: ${String(err)}\n`);
+      return 1;
+    }
+
+    const reqCtx = new RequestContext({ recordTrace: true });
+    try {
+      resolver.evaluate(rulePath, inputs, reqCtx);
+    } catch (err) {
+      process.stderr.write(`  error  evaluation failed: ${String(err)}\n`);
+      return 1;
+    }
+
+    const tree = reqCtx.getTrace();
+    if (tree) process.stdout.write(formatTrace(tree, buildFormatOptions(cliOpts)));
+    return 0;
+  }
+
+  // file mode: render a saved trace JSON file
   const file = ctx.positional[0];
   if (!file) {
-    process.stderr.write("  error  hf trace requires a file argument\n");
-    process.stderr.write("  usage  hf trace <file> [--verbose] [--slow <ms>] [--depth <n>]\n");
+    process.stderr.write("  error  usage: hf trace <file.json>  or  hf trace <rulePath> --input '<json>'\n");
     return 1;
   }
 
@@ -108,14 +161,7 @@ export const run: CommandRunner = async function runTrace(
   }
 
   try {
-    const { traceFromJSON, formatTrace } = await import("@hyperflux/core");
     const tree = traceFromJSON(json);
-    const cliOpts: TraceCliOptions = {
-      file,
-      verbose: Boolean(ctx.options["verbose"]),
-      slow: ctx.options["slow"] ? Number(ctx.options["slow"]) : undefined,
-      depth: ctx.options["depth"] ? Number(ctx.options["depth"]) : undefined,
-    };
     process.stdout.write(formatTrace(tree, buildFormatOptions(cliOpts)));
     return 0;
   } catch (err) {

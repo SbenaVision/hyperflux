@@ -23,6 +23,7 @@ import { run as runNew } from "./commands/new";
 import { run as runLint } from "./commands/lint";
 import { run as runTrace } from "./commands/trace";
 import { run as runInit } from "./commands/init";
+import { run as runEval } from "./commands/eval";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -72,6 +73,7 @@ export function buildCommandRegistry(): RegisteredCommand[] {
 
   const runnerMap: Record<string, CommandRunner> = {
     validate: runValidate,
+    eval: runEval,
     test: runTest,
     new: runNew,
     lint: runLint,
@@ -194,13 +196,20 @@ function printHelp() {
   process.stdout.write("\n  hf — HyperFlux CLI\n\n");
   process.stdout.write("  Commands:\n");
   process.stdout.write("    validate   Validate all rule files\n");
+  process.stdout.write("    eval       Evaluate a rule against JSON inputs\n");
+  process.stdout.write("    trace      Trace a rule evaluation or render a saved trace\n");
   process.stdout.write("    lint       Enforce HyperFlux discipline\n");
   process.stdout.write("    test       Run snapshot tests for rules\n");
-  process.stdout.write("    trace      Render a saved evaluation trace\n");
   process.stdout.write("    new        Scaffold a new rule stub\n");
   process.stdout.write("    init       Scaffold a new HyperFlux project\n");
   process.stdout.write("\n  Run 'hf <command> --help' for details.\n\n");
 }
 
-// Invoke main when run as a script
-main();
+// Invoke main when run as a script (not when imported by tests)
+if (
+  typeof require !== "undefined" &&
+  typeof module !== "undefined" &&
+  require.main === module
+) {
+  main();
+}

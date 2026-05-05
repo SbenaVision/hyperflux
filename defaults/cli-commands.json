@@ -16,6 +16,36 @@
       "args": []
     },
     {
+      "name": "eval",
+      "description": "Evaluate a rule against JSON inputs and print the result.",
+      "usage": "hf eval <rulePath> --input '<json>' [--trace] [--rules-dir <path>]",
+      "options": [
+        {
+          "flag": "--input",
+          "short": "-i",
+          "description": "JSON object of inputs for the rule (required).",
+          "type": "string",
+          "required": true
+        },
+        {
+          "flag": "--trace",
+          "short": "-t",
+          "description": "Print the evaluation trace before the result.",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "flag": "--rules-dir",
+          "description": "Path to the rules directory (default: ./rules).",
+          "type": "string",
+          "default": "rules"
+        }
+      ],
+      "args": [
+        { "name": "rulePath", "description": "Fully-qualified rule path, e.g. pricing.atm.fee.", "required": true }
+      ]
+    },
+    {
       "name": "lint",
       "aliases": ["check-code"],
       "description": "Run HyperFlux discipline enforcement against source and rule files.",
@@ -54,9 +84,21 @@
     },
     {
       "name": "trace",
-      "description": "Render a saved evaluation trace JSON file as a readable tree.",
-      "usage": "hf trace [file] [--verbose] [--slow <ms>] [--depth <n>]",
+      "description": "Trace a rule evaluation or render a saved trace JSON file.",
+      "usage": "hf trace <rulePath> --input '<json>'  |  hf trace <file.json>",
       "options": [
+        {
+          "flag": "--input",
+          "short": "-i",
+          "description": "JSON inputs — evaluates the rule and shows its trace.",
+          "type": "string"
+        },
+        {
+          "flag": "--rules-dir",
+          "description": "Path to the rules directory (default: ./rules).",
+          "type": "string",
+          "default": "rules"
+        },
         {
           "flag": "--verbose",
           "short": "-v",
