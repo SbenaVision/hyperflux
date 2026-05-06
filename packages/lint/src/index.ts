@@ -26,4 +26,5 @@ export type {
   LintDiagnostic,
   LintFix,
   LintResult,
+  SourceRef,
 } from "./types";

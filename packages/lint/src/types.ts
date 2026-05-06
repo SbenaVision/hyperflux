@@ -266,6 +266,32 @@ export interface LintFix {
 }
 
 // ---------------------------------------------------------------------------
+// SourceRef
+// ---------------------------------------------------------------------------
+
+/**
+ * A resolved reference to a HyperFlux rule found in TypeScript source via a
+ * `useRule()` or `useRuleStream()` call.
+ *
+ * The `Analyzer` collects these during source-file traversal and uses them to
+ * determine whether a rule is truly orphaned (no rule-to-rule references AND
+ * no source references).
+ *
+ * @since 0.1.0
+ * @public
+ */
+export interface SourceRef {
+  /** Absolute or CWD-relative path to the source file containing the call. */
+  file: string;
+  /** 1-based line number of the `useRule()` / `useRuleStream()` call. */
+  line: number;
+  /** 1-based column number of the call. */
+  column: number;
+  /** The hook name: `"useRule"` or `"useRuleStream"`. */
+  hookName: "useRule" | "useRuleStream";
+}
+
+// ---------------------------------------------------------------------------
 // LintResult
 // ---------------------------------------------------------------------------
 
@@ -292,4 +318,13 @@ export interface LintResult {
 
   /** Number of diagnostics where `fixable === true`. */
   fixableCount: number;
+
+  /**
+   * Map from rule path → source references found via `useRule()` /
+   * `useRuleStream()` calls in the analyzed source files.
+   *
+   * Used by the admin UI to show "used in source: file.tsx:42" and by the
+   * orphan check to distinguish truly dead rules from source-only references.
+   */
+  sourceRefs: ReadonlyMap<string, ReadonlyArray<SourceRef>>;
 }

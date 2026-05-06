@@ -535,7 +535,7 @@ describe("FixEngine", () => {
 
   it("computeFixes returns empty array when no fixable diagnostics", () => {
     const engine = makeEngine();
-    const result = { diagnostics: [], errorCount: 0, warnCount: 0, fixableCount: 0 };
+    const result = { diagnostics: [], errorCount: 0, warnCount: 0, fixableCount: 0, sourceRefs: new Map() };
     expect(engine.computeFixes(result, {})).toHaveLength(0);
   });
 
@@ -549,7 +549,7 @@ describe("FixEngine", () => {
           message: "test", fixable: false,
         },
       ],
-      errorCount: 0, warnCount: 1, fixableCount: 0,
+      errorCount: 0, warnCount: 1, fixableCount: 0, sourceRefs: new Map(),
     };
     expect(engine.computeFixes(result, { "src/A.tsx": "<div />" })).toHaveLength(0);
   });
@@ -567,6 +567,7 @@ describe("FixEngine", () => {
       errorCount: 0,
       warnCount: fixableDiags.length,
       fixableCount: fixableDiags.length,
+      sourceRefs: new Map(),
     };
     const fixes = engine.computeFixes(result, { "src/components/pricing/Button.tsx": source });
     expect(fixes.length).toBeGreaterThan(0);
@@ -588,6 +589,7 @@ describe("FixEngine", () => {
       errorCount: 0,
       warnCount: fixableDiags.length,
       fixableCount: fixableDiags.length,
+      sourceRefs: new Map(),
     };
     const fixes = engine.computeFixes(result, { "src/utils/pricing.ts": source });
     expect(fixes.length).toBeGreaterThan(0);
@@ -612,7 +614,7 @@ describe("FixEngine", () => {
     if (fixableDiags.length < 2) return;
 
     const engine = makeEngine();
-    const result = { diagnostics: fixableDiags, errorCount: 0, warnCount: fixableDiags.length, fixableCount: fixableDiags.length };
+    const result = { diagnostics: fixableDiags, errorCount: 0, warnCount: fixableDiags.length, fixableCount: fixableDiags.length, sourceRefs: new Map() };
     const fixes = engine.computeFixes(result, { "src/utils/pricing.ts": source });
     const updated = engine.applyFixes(fixes, { "src/utils/pricing.ts": source });
     expect(updated["src/utils/pricing.ts"]).toContain("useRule(");
@@ -625,7 +627,7 @@ describe("FixEngine", () => {
     const fixableDiags = diags.filter((d) => d.fixable);
 
     const engine = makeEngine();
-    const result = { diagnostics: fixableDiags, errorCount: 0, warnCount: fixableDiags.length, fixableCount: fixableDiags.length };
+    const result = { diagnostics: fixableDiags, errorCount: 0, warnCount: fixableDiags.length, fixableCount: fixableDiags.length, sourceRefs: new Map() };
     const plans = engine.planFixes(result, { "src/utils/pricing.ts": source });
     expect(plans.length).toBeGreaterThan(0);
     expect(plans[0].summary).toBeTruthy();
@@ -639,9 +641,181 @@ describe("FixEngine", () => {
     const fixableDiags = diags.filter((d) => d.fixable);
 
     const engine = makeEngine();
-    const result = { diagnostics: fixableDiags, errorCount: 0, warnCount: fixableDiags.length, fixableCount: fixableDiags.length };
+    const result = { diagnostics: fixableDiags, errorCount: 0, warnCount: fixableDiags.length, fixableCount: fixableDiags.length, sourceRefs: new Map() };
     const sources = { "src/pricing.ts": source };
     engine.applyFixes(engine.computeFixes(result, sources), sources);
     expect(sources["src/pricing.ts"]).toBe(source); // original unchanged
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Source-ref collection (useRule / useRuleStream scanning)
+// ---------------------------------------------------------------------------
+
+describe("Source-ref collection", () => {
+  it("detects useRule calls and populates sourceRefs in analyze()", async () => {
+    const a = makeAnalyzer();
+    const source = `
+      import { useRule } from "@hyperflux/react";
+      export function Fee() {
+        const fee = useRule<number>("pricing.atm.fee", {});
+        return fee;
+      }
+    `;
+    const domain: DomainFile = {
+      domain: "pricing",
+      version: "1",
+      rules: [{
+        path: "pricing.atm.fee",
+        kind: "compute", inputs: [],
+        output: { type: "number" },
+        cases: [{ then: { kind: "literal", value: 2.5 } }],
+        metadata: { version: "1", requires: [], domain: "pricing" },
+      }],
+    };
+    const result = await a.analyze({ "src/Fee.tsx": source }, [domain]);
+    expect(result.sourceRefs.has("pricing.atm.fee")).toBe(true);
+    const refs = result.sourceRefs.get("pricing.atm.fee")!;
+    expect(refs.length).toBe(1);
+    expect(refs[0].file).toBe("src/Fee.tsx");
+    expect(refs[0].hookName).toBe("useRule");
+  });
+
+  it("detects useRuleStream calls", async () => {
+    const a = makeAnalyzer();
+    const source = `
+      import { useRuleStream } from "@hyperflux/react";
+      export function Fee() {
+        const { value } = useRuleStream<number>("pricing.vip.discount", {});
+        return value;
+      }
+    `;
+    const domain: DomainFile = {
+      domain: "pricing",
+      version: "1",
+      rules: [{
+        path: "pricing.vip.discount",
+        kind: "compute", inputs: [],
+        output: { type: "number" },
+        cases: [{ then: { kind: "literal", value: 0.05 } }],
+        metadata: { version: "1", requires: [], domain: "pricing" },
+      }],
+    };
+    const result = await a.analyze({ "src/Pricing.tsx": source }, [domain]);
+    const refs = result.sourceRefs.get("pricing.vip.discount") ?? [];
+    expect(refs.length).toBe(1);
+    expect(refs[0].hookName).toBe("useRuleStream");
+  });
+
+  it("rule referenced only from source is NOT flagged as orphan", async () => {
+    const a = makeAnalyzer();
+    const source = `
+      const fee = useRule("pricing.atm.fee", {});
+    `;
+    const domain: DomainFile = {
+      domain: "pricing",
+      version: "1",
+      rules: [{
+        path: "pricing.atm.fee",
+        kind: "compute", inputs: [],
+        output: { type: "number" },
+        cases: [{ then: { kind: "literal", value: 2.5 } }],
+        metadata: { version: "1", requires: [], domain: "pricing" },
+      }],
+    };
+    const result = await a.analyze({ "src/Fee.ts": source }, [domain]);
+    const orphans = result.diagnostics.filter((d) => d.ruleId === "rules-no-orphans");
+    expect(orphans.some((d) => d.message.includes("pricing.atm.fee"))).toBe(false);
+  });
+
+  it("rule with NO rule-refs AND NO source-refs IS flagged as orphan", async () => {
+    const a = makeAnalyzer();
+    // Source file does NOT reference the rule
+    const source = `export const x = 1;`;
+    const domain: DomainFile = {
+      domain: "pricing",
+      version: "1",
+      rules: [{
+        path: "pricing.dead.rule",
+        kind: "compute", inputs: [],
+        output: { type: "number" },
+        cases: [{ then: { kind: "literal", value: 0 } }],
+        metadata: { version: "1", requires: [], domain: "pricing" },
+      }],
+    };
+    const result = await a.analyze({ "src/Something.ts": source }, [domain]);
+    const orphans = result.diagnostics.filter((d) => d.ruleId === "rules-no-orphans");
+    expect(orphans.some((d) => d.message.includes("pricing.dead.rule"))).toBe(true);
+    // Message should mention the source file count
+    expect(orphans[0].message).toContain("1 source file");
+  });
+
+  it("sourceRefsFor() returns refs after analyze()", async () => {
+    const a = makeAnalyzer();
+    const source = `
+      const a = useRule("config.x", {});
+      const b = useRule("config.x", {});
+      const c = useRule("config.y", {});
+    `;
+    await a.analyze({ "src/App.ts": source }, []);
+    expect(a.sourceRefsFor("config.x").length).toBe(2);
+    expect(a.sourceRefsFor("config.y").length).toBe(1);
+    expect(a.sourceRefsFor("config.z").length).toBe(0);
+  });
+
+  it("sourceRefs are reset on each analyze() call", async () => {
+    const a = makeAnalyzer();
+    const source1 = `const x = useRule("pricing.fee", {});`;
+    await a.analyze({ "src/A.ts": source1 }, []);
+    expect(a.sourceRefsFor("pricing.fee").length).toBe(1);
+
+    // Second call with different source — refs should not accumulate
+    const source2 = `export const y = 1;`;
+    await a.analyze({ "src/B.ts": source2 }, []);
+    expect(a.sourceRefsFor("pricing.fee").length).toBe(0);
+  });
+
+  it("skips dynamic useRule calls (template literals, variables)", async () => {
+    const a = makeAnalyzer();
+    const source = `
+      const key = "pricing.fee";
+      const a = useRule(key, {});          // variable — cannot resolve statically
+      const b = useRule(\`pricing.\${x}\`, {}); // template — cannot resolve statically
+    `;
+    await a.analyze({ "src/Dynamic.ts": source }, []);
+    // Neither dynamic call should produce a source ref
+    expect(a.allSourceRefs.size).toBe(0);
+  });
+
+  it("multiple source files — rule referenced in one is not orphan", async () => {
+    const a = makeAnalyzer();
+    const domain: DomainFile = {
+      domain: "copy",
+      version: "1",
+      rules: [
+        {
+          path: "copy.submit",
+          kind: "compute", inputs: [],
+          output: { type: "string" },
+          cases: [{ then: { kind: "literal", value: "Submit" } }],
+          metadata: { version: "1", requires: [], domain: "copy" },
+        },
+        {
+          path: "copy.cancel",
+          kind: "compute", inputs: [],
+          output: { type: "string" },
+          cases: [{ then: { kind: "literal", value: "Cancel" } }],
+          metadata: { version: "1", requires: [], domain: "copy" },
+        },
+      ],
+    };
+    const sources = {
+      "src/Form.tsx": `const label = useRule("copy.submit", {});`,
+      // copy.cancel not referenced anywhere
+    };
+    const result = await a.analyze(sources, [domain]);
+    const orphans = result.diagnostics.filter((d) => d.ruleId === "rules-no-orphans");
+    expect(orphans.some((d) => d.message.includes("copy.submit"))).toBe(false);
+    expect(orphans.some((d) => d.message.includes("copy.cancel"))).toBe(true);
   });
 });
