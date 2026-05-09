@@ -334,26 +334,60 @@ export class Resolver {
         );
         return this._applyOperator(expr.op, args);
       }
+
+      case "construct": {
+        const result: Record<string, unknown> = {};
+        for (const [key, fieldExpr] of Object.entries(expr.fields)) {
+          result[key] = this._evaluateExpression(fieldExpr, inputs, rulePath, ctx);
+        }
+        return result;
+      }
+
+      case "merge": {
+        const result: Record<string, unknown> = {};
+        for (const srcExpr of expr.sources) {
+          const val = this._evaluateExpression(srcExpr, inputs, rulePath, ctx);
+          if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+            Object.assign(result, val);
+          }
+        }
+        return result;
+      }
+
+      case "map": {
+        const arr = this._evaluateExpression(expr.source, inputs, rulePath, ctx);
+        if (!Array.isArray(arr)) {
+          throw new Error(`'map' source must evaluate to an array in rule '${rulePath}'`);
+        }
+        return arr.map(($item) =>
+          this._evaluateExpression(expr.item, { ...inputs, $item }, rulePath, ctx)
+        );
+      }
     }
   }
 
   private _applyOperator(op: string, args: unknown[]): unknown {
     switch (op) {
-      case "==":  return args[0] === args[1];
-      case "!=":  return args[0] !== args[1];
-      case "<":   return (args[0] as number) < (args[1] as number);
-      case "<=":  return (args[0] as number) <= (args[1] as number);
-      case ">":   return (args[0] as number) > (args[1] as number);
-      case ">=":  return (args[0] as number) >= (args[1] as number);
-      case "+":   return (args[0] as number) + (args[1] as number);
-      case "-":   return (args[0] as number) - (args[1] as number);
-      case "*":   return (args[0] as number) * (args[1] as number);
-      case "/":   return (args[0] as number) / (args[1] as number);
-      case "%":   return (args[0] as number) % (args[1] as number);
-      case "AND": return args.every(Boolean);
-      case "OR":  return args.some(Boolean);
-      case "NOT": return !args[0];
-      default:    throw new Error(`No implementation for operator '${op}'`);
+      case "==":         return args[0] === args[1];
+      case "!=":         return args[0] !== args[1];
+      case "<":          return (args[0] as number) < (args[1] as number);
+      case "<=":         return (args[0] as number) <= (args[1] as number);
+      case ">":          return (args[0] as number) > (args[1] as number);
+      case ">=":         return (args[0] as number) >= (args[1] as number);
+      case "+":          return (args[0] as number) + (args[1] as number);
+      case "-":          return (args[0] as number) - (args[1] as number);
+      case "*":          return (args[0] as number) * (args[1] as number);
+      case "/":          return (args[0] as number) / (args[1] as number);
+      case "%":          return (args[0] as number) % (args[1] as number);
+      case "AND":        return args.every(Boolean);
+      case "OR":         return args.some(Boolean);
+      case "NOT":        return !args[0];
+      case "startsWith": return (args[0] as string).startsWith(args[1] as string);
+      case "endsWith":   return (args[0] as string).endsWith(args[1] as string);
+      case "includes":   return (args[0] as string | unknown[]).includes(args[1] as string);
+      case "length":     return (args[0] as string | unknown[]).length;
+      case "concat":     return (args[0] as string) + (args[1] as string);
+      default:           throw new Error(`No implementation for operator '${op}'`);
     }
   }
 }

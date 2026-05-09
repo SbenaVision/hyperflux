@@ -1,0 +1,40 @@
+{
+  "domain": "hiflux",
+  "version": "1",
+  "rules": [
+    {
+      "path": "hiflux.lifecycle.promote.guard_source",
+      "kind": "compute",
+      "inputs": [{ "name": "is_override", "type": { "type": "boolean" } }],
+      "output": {
+        "type": "object",
+        "shape": {
+          "blocked": { "type": "boolean" },
+          "reason":  { "type": "string"  }
+        }
+      },
+      "cases": [
+        {
+          "when": { "kind": "op", "op": "NOT", "args": [{ "kind": "input", "path": ["is_override"] }] },
+          "then": { "kind": "literal", "value": { "blocked": true, "reason": "Only runtime overrides can be promoted to disk." } }
+        },
+        { "then": { "kind": "literal", "value": { "blocked": false, "reason": "" } } }
+      ],
+      "metadata": { "version": "1", "requires": [], "domain": "hiflux", "description": "Blocks promotion when the rule is already a source rule (not an override)." }
+    },
+    {
+      "path": "hiflux.lifecycle.promote.audit",
+      "kind": "compute",
+      "inputs": [{ "name": "path", "type": { "type": "string" } }],
+      "output": {
+        "type": "object",
+        "shape": {
+          "event":    { "type": "string" },
+          "severity": { "type": "string" }
+        }
+      },
+      "cases": [{ "then": { "kind": "literal", "value": { "event": "rule.promoted", "severity": "info" } } }],
+      "metadata": { "version": "1", "requires": [], "domain": "hiflux", "description": "Audit event emitted after a rule is promoted from override to source." }
+    }
+  ]
+}

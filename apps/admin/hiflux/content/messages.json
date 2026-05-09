@@ -1,0 +1,639 @@
+{
+  "domain": "hiflux",
+  "version": "1",
+  "rules": [
+    {
+      "path": "hiflux.messages.delete_warning",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "This rule has dependents. Deleting it will break those dependencies."
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.no_results",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "No rules match your filters."
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.save_success",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "Rule saved."
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.validate_error",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "Rule has validation errors. Fix before saving."
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.path_required",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "Rule path is required."
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.path_prefix_error",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "HiFlux rules must start with hiflux."
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.cases_json_error",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "Cases must be valid JSON."
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.legacy_section_title",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "Legacy Admin Rules \u2014 read-only"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.legacy_section_note",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "These rules are from the old admin. Migrate explicitly: review \u2192 copy \u2192 rename to hiflux.* \u2192 test \u2192 activate."
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.promote_confirm",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "Promote this override to the source JSON file?"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.empty_selection",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "Select a rule to view details."
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.no_dependents",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "No other rules depend on this."
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.no_requires",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "No dependencies."
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.lifecycle_loading",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "Checking lifecycle\u2026"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.audit_empty",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "No lifecycle events yet. Delete a rule to see the first entry."
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.lifecycle_blocked",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "Lifecycle check blocked this operation."
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.no_matches",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "No matches."
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.explain_verdict_block",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "would block"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.explain_verdict_pass",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "would pass"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.retry_prefix",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "retry:"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.api_missing_fields",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "Missing required fields: path, kind, output, cases"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.api_rule_exists",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "Rule path already exists"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.api_path_required",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "path param required"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.api_not_found",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "Not found"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.api_params_required",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "address, stage, and path are required"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.api_invalid_stage",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "stage must be before, during, or after"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.api_specs_required",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "specs array required"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.messages.stats_edits_label",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "edits"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Label after the edit count in the nav stats bar."
+      }
+    },
+    {
+      "path": "hiflux.messages.stats_time_saved_label",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "saved"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Label after the time-saved value in the nav stats bar."
+      }
+    },
+    {
+      "path": "hiflux.messages.stats_min_unit",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "min"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Minute abbreviation shown in the time-saved display."
+      }
+    }
+  ]
+}

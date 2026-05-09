@@ -1,0 +1,26 @@
+{
+  "version": "1",
+  "namespace": "hiflux",
+  "addresses": {
+    "rules.hiflux.delete": {
+      "before": { "externalizable": true,  "rules": ["hiflux.lifecycle.delete.guard_dependents"] },
+      "during": { "externalizable": false, "rules": [] },
+      "after":  { "externalizable": true,  "rules": ["hiflux.lifecycle.delete.audit"], "retry_policy": "none" }
+    },
+    "rules.hiflux.create": {
+      "before": { "externalizable": true,  "rules": ["hiflux.lifecycle.create.validate_path"] },
+      "during": { "externalizable": false, "rules": [] },
+      "after":  { "externalizable": true,  "rules": ["hiflux.lifecycle.create.audit"] }
+    },
+    "rules.hiflux.edit": {
+      "before": { "externalizable": true,  "rules": ["hiflux.lifecycle.edit.guard"] },
+      "during": { "externalizable": false, "rules": [] },
+      "after":  { "externalizable": true,  "rules": ["hiflux.lifecycle.edit.audit"] }
+    },
+    "rules.hiflux.promote": {
+      "before": { "externalizable": true,  "rules": ["hiflux.lifecycle.promote.guard_source"] },
+      "during": { "externalizable": false, "rules": [] },
+      "after":  { "externalizable": true,  "rules": ["hiflux.lifecycle.promote.audit"] }
+    }
+  }
+}

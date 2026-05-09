@@ -161,6 +161,46 @@ export interface OpExpression {
 }
 
 /**
+ * A `construct` expression that builds an object from named field expressions.
+ *
+ * Each key in `fields` maps to an expression that is evaluated to produce
+ * the corresponding value in the output object.
+ *
+ * @since 0.2.0
+ * @public
+ */
+export interface ConstructExpression {
+  kind: "construct";
+  fields: Record<string, Expression>;
+}
+
+/**
+ * A `merge` expression that evaluates multiple object expressions and
+ * shallow-merges them left-to-right. Later sources overwrite earlier ones.
+ *
+ * @since 0.2.0
+ * @public
+ */
+export interface MergeExpression {
+  kind: "merge";
+  sources: Expression[];
+}
+
+/**
+ * A `map` expression that evaluates `source` as an array and applies `item`
+ * to each element. The current element is bound to `$item` in the input
+ * context while evaluating `item`.
+ *
+ * @since 0.2.0
+ * @public
+ */
+export interface MapExpression {
+  kind: "map";
+  source: Expression;
+  item: Expression;
+}
+
+/**
  * A discriminated union of all HyperFlux DSL expression kinds.
  *
  * Expressions are JSON object trees — never strings — to eliminate an entire
@@ -187,7 +227,10 @@ export type Expression =
   | InputExpression
   | RuleExpression
   | FnExpression
-  | OpExpression;
+  | OpExpression
+  | ConstructExpression
+  | MergeExpression
+  | MapExpression;
 
 /**
  * Zod schema for {@link Expression}.
@@ -219,6 +262,19 @@ export const Expression: z.ZodType<Expression> = z.lazy(() =>
       kind: z.literal("op"),
       op: z.string(),
       args: z.array(Expression),
+    }),
+    z.object({
+      kind: z.literal("construct"),
+      fields: z.record(z.string(), Expression),
+    }),
+    z.object({
+      kind: z.literal("merge"),
+      sources: z.array(Expression),
+    }),
+    z.object({
+      kind: z.literal("map"),
+      source: Expression,
+      item: Expression,
     }),
   ])
 );

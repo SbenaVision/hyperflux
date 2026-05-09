@@ -5,7 +5,8 @@
  */
 
 import { useRef } from "react";
-import { RequestContext, buildCacheKey } from "@hyperflux/core";
+import { RequestContext, buildCacheKey } from "@hyperflux/core/client";
+import type { Resolver } from "@hyperflux/core/client";
 import { useHyperFluxContext } from "./context";
 
 /**
@@ -22,17 +23,23 @@ export function useRule<T = unknown>(
   path: string,
   inputs: Record<string, unknown>
 ): T {
-  const { resolver } = useHyperFluxContext();
+  const { resolver, initialValues } = useHyperFluxContext();
 
+  const resolverRef = useRef<Resolver | undefined>(undefined);
   const cacheKeyRef = useRef<string | undefined>(undefined);
-  const resultRef = useRef<T | undefined>(undefined);
+  const resultRef   = useRef<T | undefined>(undefined);
 
   const currentKey = buildCacheKey(path, inputs);
 
-  if (currentKey !== cacheKeyRef.current) {
-    const ctx = new RequestContext();
-    resultRef.current = resolver.evaluate<T>(path, inputs, ctx);
+  if (currentKey !== cacheKeyRef.current || resolver !== resolverRef.current) {
+    if (initialValues && currentKey in initialValues) {
+      resultRef.current = initialValues[currentKey] as T;
+    } else {
+      const ctx = new RequestContext();
+      resultRef.current = resolver.evaluate<T>(path, inputs, ctx);
+    }
     cacheKeyRef.current = currentKey;
+    resolverRef.current = resolver;
   }
 
   return resultRef.current as T;

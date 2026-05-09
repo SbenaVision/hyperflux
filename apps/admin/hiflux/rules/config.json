@@ -1,0 +1,758 @@
+{
+  "domain": "hiflux",
+  "version": "1",
+  "rules": [
+    {
+      "path": "hiflux.config.page_size",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "number"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": 100
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.config.font_size_default",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "M"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.config.font_size_s_rem",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "0.75"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.config.font_size_m_rem",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "0.875"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.config.font_size_l_rem",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "1"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.config.default_rule_status",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "draft"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.config.rule_statuses",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": [
+              "draft",
+              "active",
+              "archived"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Allowed rule status values."
+      }
+    },
+    {
+      "path": "hiflux.config.api_base",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "/api"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux"
+      }
+    },
+    {
+      "path": "hiflux.config.output_types",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": [
+              "string",
+              "number",
+              "boolean",
+              "null",
+              "object",
+              "array",
+              "any"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Allowed output types for rules created in HiFlux."
+      }
+    },
+    {
+      "path": "hiflux.config.default_rule_path_prefix",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "hiflux."
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Default path prefix pre-filled in the New Rule form."
+      }
+    },
+    {
+      "path": "hiflux.config.lifecycle_explain_address",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "rules.hiflux.delete"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Lifecycle address used by the ExplainPanel dry-run feature."
+      }
+    },
+    {
+      "path": "hiflux.config.toast_duration_ms",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "number"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": 2500
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "How long (ms) success/error toast notifications remain visible."
+      }
+    },
+    {
+      "path": "hiflux.config.result_truncate_length",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "number"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": 60
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Max characters shown for rule output values in tables and audit log."
+      }
+    },
+    {
+      "path": "hiflux.config.shortcut_create",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "n"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Keyboard key that opens the New Rule form."
+      }
+    },
+    {
+      "path": "hiflux.config.shortcut_edit",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "e"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Keyboard key that opens Edit for the selected rule."
+      }
+    },
+    {
+      "path": "hiflux.config.shortcut_delete",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "d"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Keyboard key that deletes the selected rule."
+      }
+    },
+    {
+      "path": "hiflux.config.shortcut_close",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "Escape"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Key that closes the active modal or clears selection."
+      }
+    },
+    {
+      "path": "hiflux.config.content_namespaces",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": [
+              "ui",
+              "actions",
+              "table",
+              "status",
+              "captions",
+              "messages"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Rule namespaces classified as Content in the admin table."
+      }
+    },
+    {
+      "path": "hiflux.config.logic_namespaces",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": [
+              "policy",
+              "config",
+              "dependencies",
+              "permissions",
+              "display",
+              "validation",
+              "lifecycle"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Rule namespaces classified as Logic in the admin table."
+      }
+    },
+    {
+      "path": "hiflux.config.route_rules",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "/rules"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "URL path for the Rules admin page."
+      }
+    },
+    {
+      "path": "hiflux.config.route_legacy",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "/legacy"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "URL path for the Legacy admin page."
+      }
+    },
+    {
+      "path": "hiflux.config.route_lifecycle",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "/lifecycle"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "URL path for the Lifecycle admin page."
+      }
+    },
+    {
+      "path": "hiflux.config.default_route",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "/rules"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Landing route for the admin app root (/)."
+      }
+    },
+    {
+      "path": "hiflux.config.lifecycle_stages",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": [
+              "before",
+              "during",
+              "after"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Ordered list of lifecycle stage names rendered in the manifest browser."
+      }
+    },
+    {
+      "path": "hiflux.config.lifecycle_address_create",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "rules.hiflux.create"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Lifecycle address invoked on rule create operations."
+      }
+    },
+    {
+      "path": "hiflux.config.lifecycle_address_edit",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "rules.hiflux.edit"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Lifecycle address invoked on rule edit operations."
+      }
+    },
+    {
+      "path": "hiflux.config.lifecycle_address_delete",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "rules.hiflux.delete"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Lifecycle address invoked on rule delete operations."
+      }
+    },
+    {
+      "path": "hiflux.config.lifecycle_address_promote",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "rules.hiflux.promote"
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Lifecycle address invoked on rule promote operations."
+      }
+    },
+    {
+      "path": "hiflux.config.source_prefix_hiflux",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "hiflux."
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Path prefix used to classify a rule as a HiFlux-owned rule."
+      }
+    },
+    {
+      "path": "hiflux.config.source_prefix_core",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "string"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": "hyperflux-core."
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Path prefix used to classify a rule as a HyperFlux-core rule."
+      }
+    },
+    {
+      "path": "hiflux.config.legacy_namespaces",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": [
+              "config.",
+              "copy.",
+              "pricing.",
+              "users.",
+              "admin."
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Path prefixes used to identify legacy-admin rules."
+      }
+    },
+    {
+      "path": "hiflux.config.minutes_per_edit",
+      "kind": "compute",
+      "inputs": [],
+      "output": {
+        "type": "number"
+      },
+      "cases": [
+        {
+          "then": {
+            "kind": "literal",
+            "value": 5
+          }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Estimated minutes of developer time saved per rule edit."
+      }
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "domain": "hiflux",
+  "version": "1",
+  "rules": [
+    {
+      "path": "hiflux.lifecycle.create.validate_path",
+      "kind": "compute",
+      "inputs": [{ "name": "path", "type": { "type": "string" } }],
+      "output": {
+        "type": "object",
+        "shape": {
+          "blocked": { "type": "boolean" },
+          "reason":  { "type": "string"  }
+        }
+      },
+      "cases": [
+        {
+          "when": { "kind": "op", "op": "==", "args": [
+            { "kind": "op", "op": "length", "args": [{ "kind": "input", "path": ["path"] }] },
+            { "kind": "literal", "value": 0 }
+          ]},
+          "then": { "kind": "literal", "value": { "blocked": true, "reason": "Rule path cannot be empty." } }
+        },
+        {
+          "when": { "kind": "op", "op": "NOT", "args": [
+            { "kind": "op", "op": "startsWith", "args": [
+              { "kind": "input", "path": ["path"] },
+              { "kind": "literal", "value": "hiflux." }
+            ]}
+          ]},
+          "then": { "kind": "literal", "value": { "blocked": true, "reason": "Rule path must start with 'hiflux.'." } }
+        },
+        {
+          "then": { "kind": "literal", "value": { "blocked": false, "reason": "" } }
+        }
+      ],
+      "metadata": {
+        "version": "1",
+        "requires": [],
+        "domain": "hiflux",
+        "description": "Validates that a new rule path is non-empty and has the correct hiflux. prefix."
+      }
+    },
+    {
+      "path": "hiflux.lifecycle.create.audit",
+      "kind": "compute",
+      "inputs": [{ "name": "path", "type": { "type": "string" } }],
+      "output": {
+        "type": "object",
+        "shape": {
+          "event":    { "type": "string" },
+          "severity": { "type": "string" }
+        }
+      },
+      "cases": [{ "then": { "kind": "literal", "value": { "event": "rule.created", "severity": "info" } } }],
+      "metadata": { "version": "1", "requires": [], "domain": "hiflux", "description": "Audit event emitted after a rule is created." }
+    }
+  ]
+}

@@ -54,6 +54,27 @@
       "scope": "rules",
       "description": "Every rule path must start with its domain name.",
       "fixable": false
+    },
+    {
+      "id": "hiflux-no-legacy-refs",
+      "severity_default": "error",
+      "scope": "rules",
+      "description": "HiFlux rules (hiflux.*) must not depend on legacy admin namespaces (config.*, copy.*, pricing.*, users.*, admin.*).",
+      "fixable": false
+    },
+    {
+      "id": "hiflux-no-admin-import",
+      "severity_default": "error",
+      "scope": "src",
+      "description": "HiFlux source files must not import from benchmark/ or rules/admin.json.",
+      "fixable": false
+    },
+    {
+      "id": "hiflux-content-in-rules",
+      "severity_default": "error",
+      "scope": "rules",
+      "description": "Content-shaped entries (label, title, button, placeholder, message, header) must live in content/, not rules/.",
+      "fixable": false
     }
   ],
   "defaults": {

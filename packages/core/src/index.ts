@@ -27,6 +27,9 @@ export type {
   RuleExpression,
   FnExpression,
   OpExpression,
+  ConstructExpression,
+  MergeExpression,
+  MapExpression,
 } from "./schema";
 
 // Operator and function registries
@@ -66,6 +69,25 @@ export type {
 // Trace
 export { formatTrace, filterTrace, traceToJSON, traceFromJSON } from "./trace";
 export type { TraceNode, TraceTree, TraceFormatOptions } from "./trace";
+
+// Lifecycle engine (server-side only — no node: deps, safe in barrel)
+export {
+  LifecycleEngine,
+  LifecycleBlockedError,
+  UnknownLifecycleAddressError,
+  ProtectedLifecycleStageError,
+} from "./lifecycle";
+export type {
+  LifecycleStageConfig,
+  LifecycleAddressConfig,
+  LifecycleManifest,
+  AuditEntry,
+  ExplainResult,
+} from "./lifecycle";
+
+// SSR prefetch utility
+export { prefetchRules } from "./prefetch";
+export type { RuleSpec, PrefetchedRules } from "./prefetch";
 
 // Errors
 export {

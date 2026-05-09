@@ -11,10 +11,12 @@
 // Hooks
 export { useRule } from "./useRule";
 export { useRuleStream } from "./useRuleStream";
+export { useRules } from "./useRules";
+export { useContent } from "./useContent";
 
 // Provider and context
-export { HyperFluxProvider, HyperFluxContext } from "./context";
-export type { HyperFluxProviderProps } from "./context";
+export { HyperFluxProvider, HyperFluxContext, ContentProvider, ContentContext } from "./context";
+export type { HyperFluxProviderProps, ContentProviderProps, ContentContextValue } from "./context";
 
 // Shared types
 export type { HyperFluxContextValue, RuleStreamResult } from "./types";

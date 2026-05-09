@@ -11,6 +11,8 @@
     "resolveJsonModule": true,
     "paths": {
       "@hyperflux/core": ["./packages/core/src/index.ts"],
+      "@hyperflux/core/client": ["./packages/core/src/client.ts"],
+      "@hyperflux/core/loader": ["./packages/core/src/loader.ts"],
       "@hyperflux/react": ["./packages/react/src/index.ts"],
       "@hyperflux/lint": ["./packages/lint/src/index.ts"],
       "@hyperflux/cli": ["./packages/cli/src/index.ts"]

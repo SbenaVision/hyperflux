@@ -1,0 +1,15 @@
+{
+  "domain": "hiflux",
+  "version": "1",
+  "rules": [
+    { "path": "hiflux.captions.label_s",    "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "S"}}],     "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.captions.label_m",    "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "M"}}],     "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.captions.label_l",    "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "L"}}],     "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.captions.size_s_rem", "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "0.75"}}],  "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.captions.size_m_rem", "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "0.875"}}], "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.captions.size_l_rem",        "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "1"}}],              "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.captions.externalizable",    "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "externalizable"}}],  "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.captions.protected_stage",   "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "protected"}}],       "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.captions.loading_indicator", "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "…"}}],              "metadata": {"version": "1", "requires": [], "domain": "hiflux"} }
+  ]
+}

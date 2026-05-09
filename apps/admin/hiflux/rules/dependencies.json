@@ -1,0 +1,24 @@
+{
+  "domain": "hiflux",
+  "version": "1",
+  "rules": [
+    {
+      "path": "hiflux.dependencies.block_delete_if_dependents",
+      "kind": "compute", "inputs": [], "output": {"type": "boolean"},
+      "cases": [{"then": {"kind": "literal", "value": true}}],
+      "metadata": {"version": "1", "requires": ["hiflux.policy.allow_source_delete"], "domain": "hiflux"}
+    },
+    {
+      "path": "hiflux.dependencies.warn_on_delete",
+      "kind": "compute", "inputs": [], "output": {"type": "boolean"},
+      "cases": [{"then": {"kind": "literal", "value": true}}],
+      "metadata": {"version": "1", "requires": [], "domain": "hiflux"}
+    },
+    {
+      "path": "hiflux.dependencies.show_dependency_count",
+      "kind": "compute", "inputs": [], "output": {"type": "boolean"},
+      "cases": [{"then": {"kind": "literal", "value": true}}],
+      "metadata": {"version": "1", "requires": [], "domain": "hiflux"}
+    }
+  ]
+}

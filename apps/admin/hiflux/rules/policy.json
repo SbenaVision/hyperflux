@@ -1,0 +1,106 @@
+{
+  "domain": "hiflux",
+  "version": "1",
+  "rules": [
+    {
+      "path": "hiflux.policy.search_enabled",
+      "kind": "compute", "inputs": [], "output": {"type": "boolean"},
+      "cases": [{"then": {"kind": "literal", "value": true}}],
+      "metadata": {"version": "1", "requires": [], "domain": "hiflux"}
+    },
+    {
+      "path": "hiflux.policy.keyboard_shortcuts_enabled",
+      "kind": "compute", "inputs": [], "output": {"type": "boolean"},
+      "cases": [{"then": {"kind": "literal", "value": true}}],
+      "metadata": {"version": "1", "requires": [], "domain": "hiflux"}
+    },
+    {
+      "path": "hiflux.policy.legacy_section_visible",
+      "kind": "compute", "inputs": [], "output": {"type": "boolean"},
+      "cases": [{"then": {"kind": "literal", "value": true}}],
+      "metadata": {"version": "1", "requires": [], "domain": "hiflux"}
+    },
+    {
+      "path": "hiflux.policy.allow_source_delete",
+      "kind": "compute", "inputs": [], "output": {"type": "boolean"},
+      "cases": [{"then": {"kind": "literal", "value": false}}],
+      "metadata": {"version": "1", "requires": [], "domain": "hiflux"}
+    },
+    {
+      "path": "hiflux.policy.allow_legacy_migration",
+      "kind": "compute", "inputs": [], "output": {"type": "boolean"},
+      "cases": [{"then": {"kind": "literal", "value": true}}],
+      "metadata": {"version": "1", "requires": [], "domain": "hiflux"}
+    },
+    {
+      "path": "hiflux.policy.detail_panel_default_open",
+      "kind": "compute", "inputs": [], "output": {"type": "boolean"},
+      "cases": [{"then": {"kind": "literal", "value": false}}],
+      "metadata": {"version": "1", "requires": [], "domain": "hiflux"}
+    },
+    {
+      "path": "hiflux.policy.require_hiflux_prefix",
+      "kind": "compute", "inputs": [], "output": {"type": "boolean"},
+      "cases": [{"then": {"kind": "literal", "value": true}}],
+      "metadata": {"version": "1", "requires": [], "domain": "hiflux"}
+    },
+    {
+      "path": "hiflux.policy.can_delete",
+      "kind": "compute",
+      "inputs": [{ "name": "dependent_count", "type": { "type": "number" } }],
+      "output": { "type": "boolean" },
+      "cases": [
+        {
+          "when": { "kind": "op", "op": ">", "args": [
+            { "kind": "input", "path": ["dependent_count"] },
+            { "kind": "literal", "value": 0 }
+          ]},
+          "then": { "kind": "literal", "value": false }
+        },
+        { "then": { "kind": "literal", "value": true } }
+      ],
+      "metadata": { "version": "1", "requires": [], "domain": "hiflux", "description": "A rule can be deleted only when it has no dependents." }
+    },
+    {
+      "path": "hiflux.policy.can_edit",
+      "kind": "compute",
+      "inputs": [],
+      "output": { "type": "boolean" },
+      "cases": [{ "then": { "kind": "literal", "value": true } }],
+      "metadata": { "version": "1", "requires": [], "domain": "hiflux", "description": "Whether the current user can edit rules. Override to false to make the UI read-only." }
+    },
+    {
+      "path": "hiflux.policy.can_promote",
+      "kind": "compute",
+      "inputs": [{ "name": "is_override", "type": { "type": "boolean" } }],
+      "output": { "type": "boolean" },
+      "cases": [{ "then": { "kind": "input", "path": ["is_override"] } }],
+      "metadata": { "version": "1", "requires": [], "domain": "hiflux", "description": "A rule can be promoted only when it is a runtime override." }
+    },
+    {
+      "path": "hiflux.policy.path_field_editable",
+      "kind": "compute",
+      "inputs": [{ "name": "mode", "type": { "type": "string" } }],
+      "output": { "type": "boolean" },
+      "cases": [
+        {
+          "when": { "kind": "op", "op": "==", "args": [
+            { "kind": "input", "path": ["mode"] },
+            { "kind": "literal", "value": "edit" }
+          ]},
+          "then": { "kind": "literal", "value": false }
+        },
+        { "then": { "kind": "literal", "value": true } }
+      ],
+      "metadata": { "version": "1", "requires": [], "domain": "hiflux", "description": "Path field is read-only when editing an existing rule." }
+    },
+    {
+      "path": "hiflux.policy.kind_field_editable",
+      "kind": "compute",
+      "inputs": [],
+      "output": { "type": "boolean" },
+      "cases": [{ "then": { "kind": "literal", "value": false } }],
+      "metadata": { "version": "1", "requires": [], "domain": "hiflux", "description": "Kind field is always read-only; HiFlux only creates compute rules." }
+    }
+  ]
+}

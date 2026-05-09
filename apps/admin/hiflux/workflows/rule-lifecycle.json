@@ -1,0 +1,41 @@
+{
+  "version": "1",
+  "namespace": "hiflux",
+  "workflows": {
+    "create": {
+      "title": "Create Rule",
+      "keyboard_shortcut": "n",
+      "steps": ["define_path", "set_output_type", "set_kind", "add_cases", "validate", "save"],
+      "requires_path_prefix": "hiflux.",
+      "default_status": "draft"
+    },
+    "edit": {
+      "title": "Edit Rule",
+      "keyboard_shortcut": "e",
+      "steps": ["edit_fields", "validate", "save"],
+      "produces_override": true
+    },
+    "delete": {
+      "title": "Delete Rule",
+      "keyboard_shortcut": "d",
+      "requires_dependency_check": true,
+      "requires_confirmation": true,
+      "blocked_if_dependents": true
+    },
+    "validate": {
+      "title": "Validate Rule",
+      "checks": ["path_format", "path_prefix_hiflux", "no_legacy_deps", "cases_json_valid", "output_type_valid"]
+    },
+    "promote": {
+      "title": "Promote to Source",
+      "requires_confirmation": true,
+      "description": "Writes the runtime override back to the source JSON file on disk. Irreversible without git.",
+      "only_for_overrides": true
+    },
+    "migrate_legacy": {
+      "title": "Migrate Legacy Rule",
+      "steps": ["review_legacy_rule", "copy_to_hiflux_namespace", "rename_path", "test", "activate"],
+      "note": "No automatic migration. Every step must be explicit."
+    }
+  }
+}

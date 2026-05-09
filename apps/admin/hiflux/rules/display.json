@@ -1,0 +1,43 @@
+{
+  "domain": "hiflux",
+  "version": "1",
+  "rules": [
+    {
+      "path": "hiflux.display.promote_action_visible",
+      "kind": "compute",
+      "inputs": [{ "name": "is_override", "type": { "type": "boolean" } }],
+      "output": { "type": "boolean" },
+      "cases": [{ "then": { "kind": "input", "path": ["is_override"] } }],
+      "metadata": { "version": "1", "requires": [], "domain": "hiflux", "description": "Whether the Promote action is visible — true only when the rule is a runtime override." }
+    },
+    {
+      "path": "hiflux.display.show_dependency_warning",
+      "kind": "compute",
+      "inputs": [{ "name": "dependent_count", "type": { "type": "number" } }],
+      "output": { "type": "boolean" },
+      "cases": [{
+        "then": { "kind": "op", "op": ">", "args": [
+          { "kind": "input", "path": ["dependent_count"] },
+          { "kind": "literal", "value": 0 }
+        ]}
+      }],
+      "metadata": { "version": "1", "requires": [], "domain": "hiflux", "description": "Show the dependency warning section when the rule has at least one dependent." }
+    },
+    {
+      "path": "hiflux.display.explain_section_visible",
+      "kind": "compute",
+      "inputs": [],
+      "output": { "type": "boolean" },
+      "cases": [{ "then": { "kind": "literal", "value": true } }],
+      "metadata": { "version": "1", "requires": [], "domain": "hiflux", "description": "Whether the Dry-run / Explain section is visible in the detail panel. Set to false to hide it globally." }
+    },
+    {
+      "path": "hiflux.display.audit_log_visible",
+      "kind": "compute",
+      "inputs": [],
+      "output": { "type": "boolean" },
+      "cases": [{ "then": { "kind": "literal", "value": true } }],
+      "metadata": { "version": "1", "requires": [], "domain": "hiflux", "description": "Whether the audit log panel is visible on the Lifecycle page." }
+    }
+  ]
+}

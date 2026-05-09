@@ -777,3 +777,170 @@ describe("RuleLoader", () => {
     await cleanup(tmpDir);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Resolver — construct / merge / map expressions
+// ---------------------------------------------------------------------------
+
+describe("Resolver — structured output expressions", () => {
+  const stringOps = [
+    { op: "startsWith", arity: 2, input_types: ["string","string"], output_type: "boolean" },
+    { op: "length",     arity: 1, input_types: ["any"],             output_type: "number"  },
+    { op: ">",          arity: 2, input_types: ["number","number"], output_type: "boolean" },
+  ];
+
+  function makeStringResolver(rules: Rule[]) {
+    const store = makeStore(rules);
+    return new Resolver({
+      ruleStore: store,
+      functionRegistry: makeFunctionRegistry(),
+      operatorRegistry: new OperatorRegistryImpl([...operatorsJson.operators, ...stringOps] as Parameters<typeof OperatorRegistryImpl>[0]),
+    });
+  }
+
+  it("construct builds an object from field expressions", () => {
+    const rule: Rule = {
+      path: "ui.badge",
+      kind: "compute",
+      inputs: [
+        { name: "label", type: { type: "string" } },
+        { name: "count", type: { type: "number" } },
+      ],
+      output: { type: "any" },
+      cases: [{
+        then: {
+          kind: "construct",
+          fields: {
+            text:  { kind: "input", path: ["label"] },
+            value: { kind: "input", path: ["count"] },
+            fixed: { kind: "literal", value: true },
+          },
+        },
+      }],
+      metadata: { version: "1", requires: [], domain: "ui" },
+    };
+    const resolver = makeResolver([rule]);
+    expect(resolver.evaluate("ui.badge", { label: "Items", count: 5 }))
+      .toEqual({ text: "Items", value: 5, fixed: true });
+  });
+
+  it("merge shallow-merges object expressions left to right", () => {
+    const rule: Rule = {
+      path: "ui.merged",
+      kind: "compute",
+      inputs: [],
+      output: { type: "any" },
+      cases: [{
+        then: {
+          kind: "merge",
+          sources: [
+            { kind: "literal", value: { a: 1, b: 2 } },
+            { kind: "literal", value: { b: 99, c: 3 } },
+          ],
+        },
+      }],
+      metadata: { version: "1", requires: [], domain: "ui" },
+    };
+    const resolver = makeResolver([rule]);
+    expect(resolver.evaluate("ui.merged", {})).toEqual({ a: 1, b: 99, c: 3 });
+  });
+
+  it("map applies item expression to each element, binding $item", () => {
+    const rule: Rule = {
+      path: "ui.doubled",
+      kind: "compute",
+      inputs: [{ name: "nums", type: { type: "array", items: { type: "number" } } }],
+      output: { type: "array", items: { type: "number" } },
+      cases: [{
+        then: {
+          kind: "map",
+          source: { kind: "input", path: ["nums"] },
+          item: {
+            kind: "op",
+            op: "+",
+            args: [
+              { kind: "input", path: ["$item"] },
+              { kind: "input", path: ["$item"] },
+            ],
+          },
+        },
+      }],
+      metadata: { version: "1", requires: [], domain: "ui" },
+    };
+    const resolver = makeResolver([rule]);
+    expect(resolver.evaluate("ui.doubled", { nums: [1, 2, 3] })).toEqual([2, 4, 6]);
+  });
+
+  it("map with empty array returns empty array", () => {
+    const rule: Rule = {
+      path: "ui.mapped_empty",
+      kind: "compute",
+      inputs: [{ name: "items", type: { type: "array", items: { type: "any" } } }],
+      output: { type: "array", items: { type: "any" } },
+      cases: [{
+        then: {
+          kind: "map",
+          source: { kind: "input", path: ["items"] },
+          item: { kind: "input", path: ["$item"] },
+        },
+      }],
+      metadata: { version: "1", requires: [], domain: "ui" },
+    };
+    const resolver = makeResolver([rule]);
+    expect(resolver.evaluate("ui.mapped_empty", { items: [] })).toEqual([]);
+  });
+
+  it("startsWith operator returns correct boolean", () => {
+    const rule: Rule = {
+      path: "check.prefix",
+      kind: "compute",
+      inputs: [{ name: "s", type: { type: "string" } }],
+      output: { type: "boolean" },
+      cases: [{
+        then: { kind: "op", op: "startsWith", args: [
+          { kind: "input", path: ["s"] },
+          { kind: "literal", value: "hiflux." },
+        ]},
+      }],
+      metadata: { version: "1", requires: [], domain: "check" },
+    };
+    const resolver = makeStringResolver([rule]);
+    expect(resolver.evaluate("check.prefix", { s: "hiflux.ui.label" })).toBe(true);
+    expect(resolver.evaluate("check.prefix", { s: "other.thing" })).toBe(false);
+  });
+
+  it("length operator returns string/array length", () => {
+    const rule: Rule = {
+      path: "check.len",
+      kind: "compute",
+      inputs: [{ name: "s", type: { type: "string" } }],
+      output: { type: "number" },
+      cases: [{
+        then: { kind: "op", op: "length", args: [{ kind: "input", path: ["s"] }] },
+      }],
+      metadata: { version: "1", requires: [], domain: "check" },
+    };
+    const resolver = makeStringResolver([rule]);
+    expect(resolver.evaluate("check.len", { s: "hello" })).toBe(5);
+    expect(resolver.evaluate("check.len", { s: "" })).toBe(0);
+  });
+
+  it("map source must be array — throws otherwise", () => {
+    const rule: Rule = {
+      path: "bad.map",
+      kind: "compute",
+      inputs: [],
+      output: { type: "any" },
+      cases: [{
+        then: {
+          kind: "map",
+          source: { kind: "literal", value: "not-an-array" },
+          item: { kind: "input", path: ["$item"] },
+        },
+      }],
+      metadata: { version: "1", requires: [], domain: "bad" },
+    };
+    const resolver = makeResolver([rule]);
+    expect(() => resolver.evaluate("bad.map", {})).toThrow("array");
+  });
+});

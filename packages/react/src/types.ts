@@ -9,7 +9,7 @@
  * @since 0.1.0
  */
 
-import type { Resolver } from "@hyperflux/core";
+import type { Resolver } from "@hyperflux/core/client";
 
 // ---------------------------------------------------------------------------
 // Context value
@@ -36,6 +36,13 @@ export interface HyperFluxContextValue {
    * re-evaluate on their next render.
    */
   resolver: Resolver;
+
+  /**
+   * Pre-evaluated rule values keyed by buildCacheKey(path, inputs).
+   * When present, useRule and useRules return these values on first access
+   * without calling resolver.evaluate — enables zero-waterfall SSR hydration.
+   */
+  initialValues?: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------

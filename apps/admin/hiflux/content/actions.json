@@ -1,0 +1,19 @@
+{
+  "domain": "hiflux",
+  "version": "1",
+  "rules": [
+    { "path": "hiflux.actions.create_label",           "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "New Rule"}}],                    "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.actions.edit_label",             "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Edit"}}],                        "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.actions.save_label",             "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Save"}}],                        "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.actions.delete_label",           "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Delete"}}],                      "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.actions.cancel_label",           "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Cancel"}}],                      "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.actions.validate_label",         "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Validate"}}],                    "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.actions.promote_label",          "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Promote to Source"}}],           "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.actions.confirm_delete_title",   "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Delete rule?"}}],               "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.actions.confirm_delete_confirm", "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Delete"}}],                      "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.actions.confirm_delete_cancel",  "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Cancel"}}],                      "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.actions.promote_confirm_label",  "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Promote"}}],                     "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.actions.filter_all_label",       "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "All"}}],                         "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.actions.close_label",            "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Close"}}],                       "metadata": {"version": "1", "requires": [], "domain": "hiflux"} }
+  ]
+}

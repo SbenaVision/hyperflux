@@ -1,3 +1,4 @@
+// hf:allow-hardcoded reason="fix-engine diagnostic truncation — internal summary strings for dev tooling, not product behavior"
 /**
  * @file Fix engine — computes and applies automated lint fixes.
  * @module @hyperflux/lint/fix-engine

@@ -1,7 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import React from "react";
-import { HyperFluxProvider, useRule, useRuleStream } from "../src/index";
+import {
+  HyperFluxProvider,
+  ContentProvider,
+  useRule,
+  useRuleStream,
+  useRules,
+  useContent,
+} from "../src/index";
 import {
   Resolver,
   RequestContext,
@@ -10,6 +17,7 @@ import {
 } from "@hyperflux/core";
 import { RuleStoreImpl, DependencyGraphImpl } from "../../core/src/rules";
 import type { Rule, DomainFile } from "@hyperflux/core";
+import { buildCacheKey } from "@hyperflux/core/client";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -219,5 +227,96 @@ describe("useRuleStream", () => {
       return null;
     }
     expect(() => render(<BadComp />)).toThrow("HyperFluxProvider");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useRules
+// ---------------------------------------------------------------------------
+
+describe("useRules", () => {
+  it("evaluates a named map of rules in one context", () => {
+    const resolver = makeResolver([submitLabelRule, atmFeeRule]);
+
+    function Comp() {
+      const { label, fee } = useRules({
+        label: { path: "ui.labels.submit", inputs: {} },
+        fee:   { path: "pricing.atm.fee",  inputs: { amount: 500 } },
+      });
+      return (
+        <span data-testid="result">
+          {String(label)}:{String(fee)}
+        </span>
+      );
+    }
+
+    render(
+      <HyperFluxProvider resolver={resolver}>
+        <Comp />
+      </HyperFluxProvider>
+    );
+
+    expect(screen.getByTestId("result").textContent).toBe("Submit:2.5");
+  });
+
+  it("respects initialValues for prefetched keys", () => {
+    const resolver = makeResolver([submitLabelRule]);
+    const key = buildCacheKey("ui.labels.submit", {});
+    const initial: Record<string, unknown> = { [key]: "Prefetched" };
+
+    function Comp() {
+      const { label } = useRules({ label: { path: "ui.labels.submit", inputs: {} } });
+      return <span data-testid="r">{String(label)}</span>;
+    }
+
+    render(
+      <HyperFluxProvider resolver={resolver} initialValues={initial}>
+        <Comp />
+      </HyperFluxProvider>
+    );
+
+    expect(screen.getByTestId("r").textContent).toBe("Prefetched");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useContent
+// ---------------------------------------------------------------------------
+
+describe("useContent", () => {
+  it("evaluates a content rule via useContent (locale ignored by no-input rules)", () => {
+    const resolver = makeResolver([submitLabelRule]);
+
+    function Comp() {
+      const label = useContent("ui.labels.submit");
+      return <span data-testid="r">{label}</span>;
+    }
+
+    render(
+      <HyperFluxProvider resolver={resolver}>
+        <ContentProvider locale="en">
+          <Comp />
+        </ContentProvider>
+      </HyperFluxProvider>
+    );
+
+    expect(screen.getByTestId("r").textContent).toBe("Submit");
+  });
+
+  it("defaults locale to en when no ContentProvider is present", () => {
+    const resolver = makeResolver([submitLabelRule]);
+
+    function Comp() {
+      const label = useContent("ui.labels.submit");
+      return <span data-testid="r">{label}</span>;
+    }
+
+    render(
+      <HyperFluxProvider resolver={resolver}>
+        <Comp />
+      </HyperFluxProvider>
+    );
+
+    expect(screen.getByTestId("r").textContent).toBe("Submit");
   });
 });

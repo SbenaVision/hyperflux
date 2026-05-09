@@ -8,7 +8,11 @@
     "build": "tsc -b packages/core packages/react packages/lint packages/cli",
     "test": "vitest run",
     "lint:self": "node packages/cli/dist/index.js lint",
-    "docs": "typedoc"
+    "docs": "typedoc",
+    "hf:check": "node scripts/hf-check.mjs",
+    "hf:externalization-check": "node scripts/hf-externalization-check.mjs",
+    "hf:data-validate": "node scripts/hf-data-validate.mjs",
+    "hf:self-test": "node scripts/hf-check.mjs && node scripts/hf-externalization-check.mjs && node scripts/hf-data-validate.mjs && tsc --noEmit && vitest run"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

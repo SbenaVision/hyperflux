@@ -1,0 +1,11 @@
+{
+  "search_enabled": true,
+  "keyboard_shortcuts_enabled": true,
+  "legacy_section_visible": true,
+  "caption_size_default": "M",
+  "detail_panel_default_open": false,
+  "api_base": "/api",
+  "page_size": 100,
+  "allow_source_delete": false,
+  "allow_legacy_migration": true
+}

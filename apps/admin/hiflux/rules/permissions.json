@@ -1,0 +1,36 @@
+{
+  "domain": "hiflux",
+  "version": "1",
+  "rules": [
+    {
+      "path": "hiflux.permissions.can_create_rule",
+      "kind": "compute", "inputs": [], "output": {"type": "boolean"},
+      "cases": [{"then": {"kind": "literal", "value": true}}],
+      "metadata": {"version": "1", "requires": [], "domain": "hiflux"}
+    },
+    {
+      "path": "hiflux.permissions.can_edit_rule",
+      "kind": "compute", "inputs": [], "output": {"type": "boolean"},
+      "cases": [{"then": {"kind": "literal", "value": true}}],
+      "metadata": {"version": "1", "requires": [], "domain": "hiflux"}
+    },
+    {
+      "path": "hiflux.permissions.can_delete_rule",
+      "kind": "compute", "inputs": [], "output": {"type": "boolean"},
+      "cases": [{"then": {"kind": "literal", "value": true}}],
+      "metadata": {"version": "1", "requires": ["hiflux.dependencies.block_delete_if_dependents"], "domain": "hiflux"}
+    },
+    {
+      "path": "hiflux.permissions.can_promote_override",
+      "kind": "compute", "inputs": [], "output": {"type": "boolean"},
+      "cases": [{"then": {"kind": "literal", "value": true}}],
+      "metadata": {"version": "1", "requires": [], "domain": "hiflux"}
+    },
+    {
+      "path": "hiflux.permissions.can_view_legacy_rules",
+      "kind": "compute", "inputs": [], "output": {"type": "boolean"},
+      "cases": [{"then": {"kind": "literal", "value": true}}],
+      "metadata": {"version": "1", "requires": ["hiflux.policy.legacy_section_visible"], "domain": "hiflux"}
+    }
+  ]
+}

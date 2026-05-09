@@ -1,0 +1,12 @@
+{
+  "domain": "hiflux",
+  "version": "1",
+  "rules": [
+    { "path": "hiflux.status.draft_label",        "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Draft"}}],          "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.status.active_label",       "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Active"}}],         "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.status.archived_label",     "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Archived"}}],       "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.status.source_hiflux",      "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "hiflux"}}],         "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.status.source_core",        "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "hyperflux-core"}}], "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.status.source_legacy",      "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "legacy-admin"}}],   "metadata": {"version": "1", "requires": [], "domain": "hiflux"} }
+  ]
+}

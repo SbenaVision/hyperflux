@@ -1,0 +1,28 @@
+{
+  "domain": "hiflux",
+  "version": "1",
+  "rules": [
+    {
+      "path": "hiflux.lifecycle.edit.guard",
+      "kind": "compute",
+      "inputs": [{ "name": "path", "type": { "type": "string" } }],
+      "output": { "type": "object", "shape": { "blocked": { "type": "boolean" } } },
+      "cases": [{ "then": { "kind": "construct", "fields": { "blocked": { "kind": "literal", "value": false } } } }],
+      "metadata": { "version": "1", "requires": [], "domain": "hiflux", "description": "Before-edit guard. Override to block editing specific paths." }
+    },
+    {
+      "path": "hiflux.lifecycle.edit.audit",
+      "kind": "compute",
+      "inputs": [{ "name": "path", "type": { "type": "string" } }],
+      "output": {
+        "type": "object",
+        "shape": {
+          "event":    { "type": "string" },
+          "severity": { "type": "string" }
+        }
+      },
+      "cases": [{ "then": { "kind": "literal", "value": { "event": "rule.updated", "severity": "info" } } }],
+      "metadata": { "version": "1", "requires": [], "domain": "hiflux", "description": "Audit event emitted after a rule is edited." }
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+// hf:allow-hardcoded reason="lint diagnostic truncation — internal report formatting, not user-configurable product behavior"
 /**
  * @file Lint analyzer — AST traversal and rule application engine.
  * @module @hyperflux/lint/analyzer

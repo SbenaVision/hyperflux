@@ -11,7 +11,7 @@ import {
   type ReactNode,
   type Context,
 } from "react";
-import type { Resolver } from "@hyperflux/core";
+import type { Resolver } from "@hyperflux/core/client";
 import type { HyperFluxContextValue } from "./types";
 
 /**
@@ -45,6 +45,8 @@ export function useHyperFluxContext(): HyperFluxContextValue {
  */
 export interface HyperFluxProviderProps {
   resolver: Resolver;
+  /** Pre-evaluated rule values from prefetchRules(). Hydrates useRule on first render. */
+  initialValues?: Record<string, unknown>;
   children: ReactNode;
 }
 
@@ -54,6 +56,40 @@ export interface HyperFluxProviderProps {
  * @public
  */
 export function HyperFluxProvider(props: HyperFluxProviderProps): ReactNode {
-  const value: HyperFluxContextValue = { resolver: props.resolver };
+  const value: HyperFluxContextValue = {
+    resolver: props.resolver,
+    initialValues: props.initialValues,
+  };
   return createElement(HyperFluxContext.Provider, { value }, props.children);
+}
+
+// ---------------------------------------------------------------------------
+// ContentContext — locale for useContent
+// ---------------------------------------------------------------------------
+
+export interface ContentContextValue {
+  locale: string;
+}
+
+export const ContentContext: Context<ContentContextValue | null> =
+  createContext<ContentContextValue | null>(null);
+
+export interface ContentProviderProps {
+  locale?: string;
+  children: ReactNode;
+}
+
+/**
+ * Provides locale context to {@link useContent}. Wrap your app (or any
+ * subtree that renders content rules) with this provider.
+ * Defaults to `"en"` when omitted.
+ * @since 0.2.0
+ * @public
+ */
+export function ContentProvider(props: ContentProviderProps): ReactNode {
+  return createElement(
+    ContentContext.Provider,
+    { value: { locale: props.locale ?? "en" } },
+    props.children
+  );
 }

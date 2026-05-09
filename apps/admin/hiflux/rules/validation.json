@@ -1,0 +1,45 @@
+{
+  "domain": "hiflux",
+  "version": "1",
+  "rules": [
+    {
+      "path": "hiflux.validation.path_nonempty",
+      "kind": "compute",
+      "inputs": [{ "name": "path", "type": { "type": "string" } }],
+      "output": { "type": "boolean" },
+      "cases": [{
+        "then": { "kind": "op", "op": ">", "args": [
+          { "kind": "op", "op": "length", "args": [{ "kind": "input", "path": ["path"] }] },
+          { "kind": "literal", "value": 0 }
+        ]}
+      }],
+      "metadata": { "version": "1", "requires": [], "domain": "hiflux", "description": "Returns true when the path is non-empty." }
+    },
+    {
+      "path": "hiflux.validation.path_has_hiflux_prefix",
+      "kind": "compute",
+      "inputs": [{ "name": "path", "type": { "type": "string" } }],
+      "output": { "type": "boolean" },
+      "cases": [{
+        "then": { "kind": "op", "op": "startsWith", "args": [
+          { "kind": "input", "path": ["path"] },
+          { "kind": "literal", "value": "hiflux." }
+        ]}
+      }],
+      "metadata": { "version": "1", "requires": [], "domain": "hiflux", "description": "Returns true when the path starts with 'hiflux.'." }
+    },
+    {
+      "path": "hiflux.validation.path_valid",
+      "kind": "compute",
+      "inputs": [{ "name": "path", "type": { "type": "string" } }],
+      "output": { "type": "boolean" },
+      "cases": [{
+        "then": { "kind": "op", "op": "AND", "args": [
+          { "kind": "rule", "path": "hiflux.validation.path_nonempty",          "args": [{ "kind": "input", "path": ["path"] }] },
+          { "kind": "rule", "path": "hiflux.validation.path_has_hiflux_prefix", "args": [{ "kind": "input", "path": ["path"] }] }
+        ]}
+      }],
+      "metadata": { "version": "1", "requires": ["hiflux.validation.path_nonempty", "hiflux.validation.path_has_hiflux_prefix"], "domain": "hiflux", "description": "Composite: path is non-empty AND starts with hiflux." }
+    }
+  ]
+}

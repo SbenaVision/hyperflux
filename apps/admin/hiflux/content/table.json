@@ -1,0 +1,20 @@
+{
+  "domain": "hiflux",
+  "version": "1",
+  "rules": [
+    { "path": "hiflux.table.col_rule_header",    "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Rule"}}],         "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.table.col_status_header",  "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Status"}}],       "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.table.col_updated_header", "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Last Updated"}}], "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.table.col_deps_header",    "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Deps"}}],         "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.table.col_source_header",  "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Source"}}],       "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.table.default_sort_key",      "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "path"}}],       "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.table.col_value_header",       "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Value"}}],       "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.table.col_ns_header",          "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "NS"}}],          "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.table.col_rule_path_header",    "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Rule path"}}],  "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.table.col_time_header",         "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Time"}}],        "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.table.col_address_header",      "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Address"}}],    "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.table.col_stage_header",        "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Stage"}}],      "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.table.col_duration_ms_header",  "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "ms"}}],         "metadata": {"version": "1", "requires": [], "domain": "hiflux"} },
+    { "path": "hiflux.table.col_result_header",       "kind": "compute", "inputs": [], "output": {"type": "string"}, "cases": [{"then": {"kind": "literal", "value": "Result"}}],     "metadata": {"version": "1", "requires": [], "domain": "hiflux"} }
+  ]
+}
